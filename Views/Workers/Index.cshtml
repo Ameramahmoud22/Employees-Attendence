@@ -1,0 +1,43 @@
+﻿@model IEnumerable<Employees_Attendence.Models.Worker>
+@{
+    ViewData["Title"] = "العمال";
+}
+
+<div class="container py-5">
+    <h2 class="text-gold mb-4">👷 قائمة العمال</h2>
+
+    @if (!Model.Any())
+    {
+        <div class="alert alert-warning text-center">
+            لا يوجد عمال حالياً في قاعدة البيانات.
+        </div>
+    }
+    else
+    {
+        <table class="table table-bordered table-striped text-center">
+            <thead class="table-dark">
+                <tr>
+                    <th>الاسم</th>
+                    <th>الفئة</th>
+                    <th>النوع</th>
+                    <th>الهاتف</th>
+                    <th>اليومية</th>
+                    <th>ملاحظات</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var w in Model)
+                {
+                    <tr>
+                        <td>@w.Name</td>
+                        <td>@w.Category?.Name</td>
+                        <td>@w.Type</td>
+                        <td>@w.Phone</td>
+                        <td>@w.DailyWage</td>
+                        <td>@w.Notes</td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    }
+</div>
