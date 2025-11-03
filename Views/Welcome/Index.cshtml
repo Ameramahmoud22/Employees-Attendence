@@ -1,0 +1,58 @@
+﻿@{
+    Layout = null;
+}
+
+<!DOCTYPE html>
+<html lang="ar">
+<head>
+    <meta charset="utf-8" />
+    <title>نظام العمال</title>
+    <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
+    <style>
+        body {
+            background-color: #111;
+            color: white;
+            text-align: center;
+            font-family: 'Cairo', sans-serif;
+        }
+
+        .welcome-container {
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .logo {
+            width: 130px;
+            margin-bottom: 20px;
+        }
+
+        .btn-enter {
+            margin-top: 25px;
+            background-color: #d4af37;
+            border: none;
+            color: black;
+            font-weight: bold;
+            padding: 10px 25px;
+            border-radius: 25px;
+            transition: all 0.3s ease-in-out;
+        }
+
+            .btn-enter:hover {
+                background-color: #c09b32;
+                transform: scale(1.05);
+            }
+    </style>
+</head>
+<body>
+    <div class="welcome-container">
+        <img src="~/images/logoNew.jpg" class="logo" alt="Logo" />
+        <h1>مرحبا بكم فى شركة البنا وبيت البناء </h1>
+        <form asp-action="EnterSystem" method="post">
+            <button type="submit" class="btn btn-enter">دخول للنظام</button>
+        </form>
+    </div>
+</body>
+</html>

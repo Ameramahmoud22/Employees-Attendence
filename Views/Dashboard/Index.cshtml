@@ -1,0 +1,117 @@
+﻿@{
+    ViewData["Title"] = "لوحة الإحصائيات";
+}
+
+<div class="container py-5" data-aos="fade-up">
+    <h2 class="text-center text-gold mb-5 animate__animated animate__fadeInDown">📊 لوحة إحصائيات العمال</h2>
+
+    <!-- Cards Row -->
+    <div class="row g-4 mb-5">
+        <div class="col-md-3">
+            <div class="card text-center shadow-lg border-0 bg-dark text-light animate__animated animate__zoomIn">
+                <div class="card-body">
+                    <h5 class="card-title text-gold">عدد العمال</h5>
+                    <h2 class="fw-bold">@ViewBag.TotalWorkers</h2>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card text-center shadow-lg border-0 bg-dark text-light animate__animated animate__zoomIn animate__delay-1s">
+                <div class="card-body">
+                    <h5 class="card-title text-gold">عدد الفئات</h5>
+                    <h2 class="fw-bold">@ViewBag.TotalCategories</h2>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card text-center shadow-lg border-0 bg-dark text-light animate__animated animate__zoomIn animate__delay-2s">
+                <div class="card-body">
+                    <h5 class="card-title text-gold">إجمالي الخصومات والسُلف</h5>
+                    <h2 class="fw-bold">@ViewBag.TotalDeductions.ToString("N0") ج.م</h2>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card text-center shadow-lg border-0 bg-dark text-light animate__animated animate__zoomIn animate__delay-3s">
+                <div class="card-body">
+                    <h5 class="card-title text-gold">إجمالي القبض الأسبوعي</h5>
+                    <h2 class="fw-bold">@ViewBag.TotalWeeklyPay.ToString("N0") ج.م</h2>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Chart Section -->
+    <div class="row g-4">
+        <div class="col-lg-6">
+            <div class="card bg-dark text-light border-0 shadow-lg p-3" data-aos="fade-right">
+                <h5 class="text-center text-gold mb-3">📈 توزيع العمال حسب الفئات</h5>
+                <canvas id="categoryChart" height="200"></canvas>
+            </div>
+        </div>
+
+        <div class="col-lg-6">
+            <div class="card bg-dark text-light border-0 shadow-lg p-3" data-aos="fade-left">
+                <h5 class="text-center text-gold mb-3">💰 إجمالي القبض لكل فئة</h5>
+                <canvas id="payChart" height="200"></canvas>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script>
+        AOS.init();
+
+        // بيانات الفئات من السيرفر
+        const categories = @Html.Raw(Newtonsoft.Json.JsonConvert.SerializeObject(ViewBag.TopCategories));
+
+        const names = categories.map(c => c.name);
+        const counts = categories.map(c => c.count);
+
+        // رسم بياني 1: توزيع العمال
+        new Chart(document.getElementById("categoryChart"), {
+            type: 'doughnut',
+            data: {
+                labels: names,
+                datasets: [{
+                    data: counts,
+                    backgroundColor: [
+                        '#d4af37', '#e0c36b', '#b99232', '#f5e1a4', '#7c6b30'
+                    ],
+                    borderColor: '#222',
+                    borderWidth: 2
+                }]
+            },
+            options: {
+                plugins: {
+                    legend: { labels: { color: '#fff' } }
+                }
+            }
+        });
+
+        // رسم بياني 2: إجمالي القبض (قيمة تقريبية)
+        const payData = counts.map(c => c * 2000); // مثال بسيط
+        new Chart(document.getElementById("payChart"), {
+            type: 'bar',
+            data: {
+                labels: names,
+                datasets: [{
+                    label: 'إجمالي القبض (ج.م)',
+                    data: payData,
+                    backgroundColor: '#d4af37'
+                }]
+            },
+            options: {
+                scales: {
+                    x: { ticks: { color: '#fff' } },
+                    y: { ticks: { color: '#fff' } }
+                },
+                plugins: {
+                    legend: { labels: { color: '#fff' } }
+                }
+            }
+        });
+    </script>
+}

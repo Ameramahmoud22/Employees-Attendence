@@ -1,0 +1,48 @@
+﻿@model IEnumerable<Employees_Attendence.Models.MonthlyPayrollRecord>
+@{
+    ViewData["Title"] = "قائمة القبض الشهري";
+}
+
+<div class="app-card">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h3>📅 قائمة القبض الشهري</h3>
+        <a class="btn btn-primary" asp-action="BatchMonthly">إضافة سجلات شهرية</a>
+    </div>
+
+    <table class="table table-bordered table-fancy">
+        <thead>
+            <tr>
+                <th>الشهر</th>
+                <th>السنة</th>
+                <th>اسم العامل</th>
+                <th>الفئة</th>
+                <th>القبض الشهري</th>
+                <th>الاستلاف</th>
+                <th>الخصومات</th>
+                <th>الصافي</th>
+                <th>ملاحظات</th>
+                <th>التحكم</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var item in Model)
+            {
+                <tr>
+                    <td>@item.Month</td>
+                    <td>@item.Year</td>
+                    <td>@item.Worker?.Name</td>
+                    <td>@item.Worker?.Category?.Name</td>
+                    <td>@item.MonthlyAmount.ToString("N2")</td>
+                    <td>@item.Advances.ToString("N2")</td>
+                    <td>@item.Deductions.ToString("N2")</td>
+                    <td><strong>@item.NetPay.ToString("N2")</strong></td>
+                    <td>@item.Notes</td>
+                    <td>
+                        <a asp-action="Edit" asp-route-id="@item.Id" class="btn btn-sm btn-outline-warning">تعديل</a>
+                        <a asp-action="Delete" asp-route-id="@item.Id" class="btn btn-sm btn-outline-danger">حذف</a>
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+</div>

@@ -1,0 +1,111 @@
+﻿@{
+    ViewData["Title"] = "تسجيل الحضور الأسبوعي";
+    var weekDates = ViewBag.WeekDates as List<DateTime>;
+    var workers = ViewBag.Workers as List<Employees_Attendence.Models.Worker>;
+    var attendance = ViewBag.Attendance as Dictionary<(int, DateTime), Employees_Attendence.Models.AttendanceRecord>;
+    var weekOffset = (int)(ViewBag.WeekOffset ?? 0);
+}
+
+<link href="https://cdnjs.cloudflare.com/ajax/libs/aos/2.3.4/aos.css" rel="stylesheet" />
+
+<div class="container py-4" data-aos="fade-up">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h2 class="text-gold">تسجيل الحضور الأسبوعي</h2>
+
+        <div>
+            <a class="btn btn-outline-light me-2" asp-action="Index" asp-route-weekOffset="@(weekOffset - 1)">← الأسبوع السابق</a>
+            <a class="btn btn-outline-light me-2" asp-action="Index" asp-route-weekOffset="@(weekOffset + 1)">الأسبوع التالي →</a>
+            <a class="btn btn-gold" onclick="document.getElementById('attendanceForm').submit();">حفظ التغييرات</a>
+        </div>
+    </div>
+
+    <form id="attendanceForm" asp-action="SaveWeek" method="post">
+        @Html.AntiForgeryToken()
+        <input type="hidden" name="weekOffset" value="@weekOffset" />
+
+        <div class="table-responsive shadow rounded">
+            <table class="table align-middle text-center mb-0" style="background:#0f0f0f; color:#fff;">
+                <thead>
+                    <tr style="background:#111; border-bottom:2px solid #d4af37;">
+                        <th class="text-gold">اسم العامل</th>
+                        @foreach (var d in weekDates)
+                        {
+                            <th class="text-gold">@d.ToString("ddd dd/MM")</th>
+                        }
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var w in workers)
+                    {
+                        <tr>
+                            <td class="text-start ps-3">@w.Name <div class="text-muted small">@w.Category?.Name</div></td>
+
+                            @foreach (var d in weekDates)
+                            {
+                                var key = (w.Id, d.Date);
+                                bool isChecked = attendance != null && attendance.ContainsKey(key) && attendance[key].IsPresent;
+                                <td>
+                                    <div class="form-check form-switch d-flex justify-content-center align-items-center">
+                                        <input class="form-check-input" type="checkbox" role="switch"
+                                               id="present_@w.Id@d.ToString("yyyyMMdd")"
+                                               name="present_@w.Id@d.ToString("yyyyMMdd")"
+                                        @(isChecked ? "checked" : "") />
+                                    </div>
+                                </td>
+                            }
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+
+    </form>
+
+    <div class="mt-3">
+        <small class="text-muted">ملاحظة: علّمي الخانات ثم اضغطي "حفظ التغييرات" لحفظ الحضور في قاعدة البيانات.</small>
+    </div>
+</div>
+
+@section Styles {
+    <style>
+        .text-gold {
+            color: #d4af37;
+        }
+
+        .btn-gold {
+            background: #d4af37;
+            color: #000;
+            border-radius: 30px;
+            padding: 8px 16px;
+            border: none;
+        }
+
+        .btn-outline-light {
+            background: transparent;
+            color: #fff;
+            border: 1px solid rgba(255,255,255,0.08);
+            padding: 6px 10px;
+            border-radius: 8px;
+        }
+
+        table.table thead th {
+            font-weight: 700;
+        }
+
+        table.table tbody td {
+            background: linear-gradient(180deg, #111, #0b0b0b);
+            border-right: 1px solid rgba(255,255,255,0.03);
+        }
+
+        .form-check-input {
+            width: 40px;
+            height: 20px;
+            transform: scale(1.1);
+        }
+    </style>
+}
+
+@section Scripts {
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/aos/2.3.4/aos.js"></script>
+    <script>AOS.init();</script>
+}

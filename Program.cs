@@ -1,3 +1,6 @@
+using Employees_Attendence.Data;
+using Microsoft.EntityFrameworkCore;
+
 namespace Employees_Attendence
 {
     public class Program
@@ -9,6 +12,8 @@ namespace Employees_Attendence
             // Add services to the container.
             builder.Services.AddControllersWithViews();
 
+            builder.Services.AddDbContext<ApplicationDbContext>(options =>
+    options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
             var app = builder.Build();
 
             // Configure the HTTP request pipeline.
@@ -28,7 +33,7 @@ namespace Employees_Attendence
 
             app.MapControllerRoute(
                 name: "default",
-                pattern: "{controller=Home}/{action=Index}/{id?}");
+                pattern: "{controller=Welcome}/{action=Index}/{id?}");
 
             app.Run();
         }

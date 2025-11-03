@@ -1,0 +1,110 @@
+﻿@model IEnumerable<Employees_Attendence.Models.MonthlyPayrollRecord>
+@{
+    ViewData["Title"] = "القبض الشهري";
+    int month = (int)ViewBag.Month;
+    int year = (int)ViewBag.Year;
+}
+
+<div class="app-card">
+    <div class="d-flex justify-content-between align-items-center">
+        <h3>قبض - شهري (@month / @year)</h3>
+
+        <form method="get" asp-action="BatchMonthly" class="d-flex align-items-center">
+            <label class="me-2">الشهر:</label>
+            <select name="month" class="form-select me-3" style="width:100px;">
+                @for (int m = 1; m <= 12; m++)
+                {
+                    <option value="@m" selected="@(m == month ? "selected" : null)">@m</option>
+                }
+            </select>
+
+            <label class="me-2">السنة:</label>
+            <select name="year" class="form-select me-3" style="width:120px;">
+                @for (int y = DateTime.Today.Year - 2; y <= DateTime.Today.Year + 1; y++)
+                {
+                    <option value="@y" selected="@(y == year ? "selected" : null)">@y</option>
+                }
+            </select>
+
+            <button type="submit" class="btn btn-primary">عرض</button>
+        </form>
+    </div>
+
+    <form method="post" asp-action="SaveMonthly" id="payForm">
+        <table class="table table-bordered mt-3">
+            <thead class="table-fancy">
+                <tr>
+                    <th>اسم العامل</th>
+                    <th>القبض الشهري</th>
+                    <th>الاستلاف</th>
+                    <th>خصومات</th>
+                    <th>صافي القبض</th>
+                    <th>ملاحظات</th>
+                </tr>
+            </thead>
+            <tbody>
+                @for (int i = 0; i < Model.Count(); i++)
+                {
+                    var item = Model.ElementAt(i);
+                    <tr>
+                        <td>
+                            <input type="hidden" name="entries[@i].WorkerId" value="@item.WorkerId" />
+                            <input type="hidden" name="entries[@i].Month" value="@month" />
+                            <input type="hidden" name="entries[@i].Year" value="@year" />
+                            <div><strong>@item.Worker.Name</strong> <small class="text-muted">(@item.Worker.Category?.Name)</small></div>
+                        </td>
+                        <td>
+                            <input name="entries[@i].MonthlyAmount" class="form-control monthlyAmount" value="@item.MonthlyAmount.ToString("N2")" />
+                        </td>
+                        <td>
+                            <input name="entries[@i].Advances" class="form-control advances" value="@item.Advances.ToString("N2")" />
+                        </td>
+                        <td>
+                            <input name="entries[@i].Deductions" class="form-control deductions" value="@item.Deductions.ToString("N2")" />
+                        </td>
+                        <td>
+                            <input name="entries[@i].NetPay" readonly class="form-control netpay" value="@item.NetPay.ToString("N2")" />
+                        </td>
+                        <td>
+                            <input name="entries[@i].Notes" class="form-control" value="@item.Notes" />
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+
+        <div class="d-flex justify-content-between align-items-center mt-3">
+            <div>
+                <strong>إجمالي القبض الشهري: </strong> <span id="grandTotal">0.00</span>
+            </div>
+            <button class="btn btn-success" type="submit">💾 حفظ سجلات الشهر</button>
+        </div>
+    </form>
+</div>
+
+@section Scripts {
+    <script>
+        function parseNum(v){ v = v+''; v = v.replace(/,/g,''); return parseFloat(v) || 0; }
+
+        function recalc(){
+            let grand = 0;
+            document.querySelectorAll('tbody tr').forEach(row=>{
+                const monthly = parseNum(row.querySelector('.monthlyAmount')?.value);
+                const adv = parseNum(row.querySelector('.advances')?.value);
+                const ded = parseNum(row.querySelector('.deductions')?.value);
+                const net = monthly - adv - ded;
+                if(row.querySelector('.netpay')) row.querySelector('.netpay').value = net.toFixed(2);
+                grand += net;
+            });
+            document.getElementById('grandTotal').innerText = grand.toFixed(2);
+        }
+
+        document.addEventListener('input', function(e){
+            if (e.target.classList.contains('monthlyAmount') || e.target.classList.contains('advances') || e.target.classList.contains('deductions')) {
+                recalc();
+            }
+        });
+
+        recalc();
+    </script>
+}

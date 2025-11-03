@@ -11,7 +11,10 @@ namespace Employees_Attendence.Models
         [Display(Name = "اسم الفئة")]
         public string Name { get; set; }
 
-        public ICollection<Worker> Workers { get; set; }
+        [Display(Name = "الوصف")]
+        public string? Description { get; set; }
+
+        public ICollection<Worker>? Workers { get; set; }
 
     }
 }
