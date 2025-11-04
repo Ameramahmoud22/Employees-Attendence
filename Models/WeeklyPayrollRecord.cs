@@ -32,5 +32,6 @@ namespace Employees_Attendence.Models
 
         [Display(Name = "ملاحظات")]
         public string Notes { get; set; }
+        public decimal? Advance { get; internal set; }
     }
 }

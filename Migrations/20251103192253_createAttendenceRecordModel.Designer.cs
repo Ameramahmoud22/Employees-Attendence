@@ -4,6 +4,7 @@ using Employees_Attendence.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace Employees_Attendence.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20251103192253_createAttendenceRecordModel")]
+    partial class createAttendenceRecordModel
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -30,16 +33,11 @@ namespace Employees_Attendence.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
-                    b.Property<DateTime>("AttendanceDate")
+                    b.Property<DateTime>("Date")
                         .HasColumnType("datetime2");
 
-                    b.Property<string>("Notes")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("Status")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
+                    b.Property<bool>("IsPresent")
+                        .HasColumnType("bit");
 
                     b.Property<int>("WorkerId")
                         .HasColumnType("int");
@@ -119,9 +117,6 @@ namespace Employees_Attendence.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
-                    b.Property<decimal?>("Advance")
-                        .HasColumnType("decimal(18,2)");
-
                     b.Property<decimal>("Advances")
                         .HasColumnType("decimal(18,2)");
 
@@ -163,10 +158,16 @@ namespace Employees_Attendence.Migrations
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
+                    b.Property<decimal>("Advance")
+                        .HasColumnType("decimal(18,2)");
+
                     b.Property<int>("CategoryId")
                         .HasColumnType("int");
 
                     b.Property<decimal>("DailyWage")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<decimal>("Deductions")
                         .HasColumnType("decimal(18,2)");
 
                     b.Property<string>("Name")
@@ -195,7 +196,7 @@ namespace Employees_Attendence.Migrations
             modelBuilder.Entity("Employees_Attendence.Models.AttendanceRecord", b =>
                 {
                     b.HasOne("Employees_Attendence.Models.Worker", "Worker")
-                        .WithMany("AttendanceRecords")
+                        .WithMany()
                         .HasForeignKey("WorkerId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
@@ -206,7 +207,7 @@ namespace Employees_Attendence.Migrations
             modelBuilder.Entity("Employees_Attendence.Models.MonthlyPayrollRecord", b =>
                 {
                     b.HasOne("Employees_Attendence.Models.Worker", "Worker")
-                        .WithMany("MonthlyPayrollRecords")
+                        .WithMany()
                         .HasForeignKey("WorkerId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
@@ -217,7 +218,7 @@ namespace Employees_Attendence.Migrations
             modelBuilder.Entity("Employees_Attendence.Models.WeeklyPayrollRecord", b =>
                 {
                     b.HasOne("Employees_Attendence.Models.Worker", "Worker")
-                        .WithMany("WeeklyPayrollRecords")
+                        .WithMany()
                         .HasForeignKey("WorkerId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
@@ -239,15 +240,6 @@ namespace Employees_Attendence.Migrations
             modelBuilder.Entity("Employees_Attendence.Models.Category", b =>
                 {
                     b.Navigation("Workers");
-                });
-
-            modelBuilder.Entity("Employees_Attendence.Models.Worker", b =>
-                {
-                    b.Navigation("AttendanceRecords");
-
-                    b.Navigation("MonthlyPayrollRecords");
-
-                    b.Navigation("WeeklyPayrollRecords");
                 });
 #pragma warning restore 612, 618
         }

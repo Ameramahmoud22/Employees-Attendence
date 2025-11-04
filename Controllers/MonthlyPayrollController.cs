@@ -1,6 +1,6 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using Employees_Attendence.Data;
 using Employees_Attendence.Models;
-using Employees_Attendence.Data;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
 namespace Employees_Attendence.Controllers
@@ -14,20 +14,7 @@ namespace Employees_Attendence.Controllers
             _context = context;
         }
 
-        // صفحة عرض قائمة السجلات التي تم حفظها بالفعل
-        public async Task<IActionResult> Index()
-        {
-            var records = await _context.MonthlyPayrollRecords
-                .Include(r => r.Worker)
-                .ThenInclude(w => w.Category)
-                .OrderByDescending(r => r.Year)
-                .ThenByDescending(r => r.Month)
-                .ToListAsync();
-
-            return View(records);
-        }
-
-        // عرض القبض الشهري بنظام الفلترة (الصفحة الرئيسية لإدخال البيانات)
+        // ✅ عرض القبض الشهري مع حساب أيام الحضور
         public async Task<IActionResult> BatchMonthly(int? month, int? year)
         {
             month ??= DateTime.Today.Month;
@@ -36,50 +23,65 @@ namespace Employees_Attendence.Controllers
             ViewBag.Month = month;
             ViewBag.Year = year;
 
-            // حساب عدد أيام الشهر لتقدير قيمة القبض المبدئية
-            int daysInMonth = DateTime.DaysInMonth(year.Value, month.Value);
+            var startDate = new DateTime(year.Value, month.Value, 1).Date;
+            var endDate = startDate.AddMonths(1).AddDays(-1).Date;
 
             var workers = await _context.Workers.Include(w => w.Category).ToListAsync();
+
             var existingRecords = await _context.MonthlyPayrollRecords
                 .Where(m => m.Month == month && m.Year == year)
-                .ToDictionaryAsync(m => m.WorkerId);
+                .ToDictionaryAsync(r => r.WorkerId, r => r);
 
-            var model = workers.Select(w =>
+            var attendanceRecords = await _context.AttendanceRecords
+                .Where(r => r.AttendanceDate.Date >= startDate && r.AttendanceDate.Date <= endDate)
+                .ToListAsync();
+
+            var model = new List<MonthlyPayrollRecord>();
+
+            foreach (var w in workers)
             {
-                var record = existingRecords.GetValueOrDefault(w.Id);
+                var presentDays = attendanceRecords
+                    .Count(r => r.WorkerId == w.Id && r.Status == "حاضر");
 
-                // 1. إذا كان السجل موجودًا، استخدمه
-                if (record != null)
-                    return record;
-
-                // 2. إذا لم يكن موجودًا، أنشئ سجلًا جديدًا
-                return new MonthlyPayrollRecord
+                if (existingRecords.TryGetValue(w.Id, out var existingRecord))
                 {
-                    WorkerId = w.Id,
-                    Worker = w,
-                    Month = month.Value,
-                    Year = year.Value,
-                    // القيمة المقترحة: الأجر اليومي للعامل * عدد أيام الشهر
-                    MonthlyAmount = w.DailyWage * daysInMonth,
-                    Advances = 0,
-                    Deductions = 0,
-                    NetPay = 0,
-                    Notes = ""
-                };
-            }).ToList();
+                    existingRecord.Notes = $"({presentDays} يوم حضور) - " + (existingRecord.Notes ?? "");
+                    model.Add(existingRecord);
+                }
+                else
+                {
+                    var newRecord = new MonthlyPayrollRecord
+                    {
+                        WorkerId = w.Id,
+                        Worker = w,
+                        Month = month.Value,
+                        Year = year.Value,
+                        MonthlyAmount = w.DailyWage * presentDays,
+                        Advances = 0,
+                        Deductions = 0,
+                        NetPay = w.DailyWage * presentDays,
+                        Notes = $"{presentDays} يوم حضور"
+                    };
+                    model.Add(newRecord);
+                }
+            }
 
             return View(model);
         }
 
+        // ✅ حفظ القبض الشهري
         [HttpPost]
-        public async Task<IActionResult> SaveMonthly(List<MonthlyPayrollRecord> entries)
+        public async Task<IActionResult> SaveMonthly([FromForm] MonthlyPayrollRecord[] entries)
         {
             if (entries == null || !entries.Any())
                 return BadRequest("لا توجد بيانات محفوظة.");
 
+            var first = entries.First();
+            int month = first.Month;
+            int year = first.Year;
+
             foreach (var entry in entries)
             {
-                // إعادة حساب الصافي قبل الحفظ
                 entry.NetPay = entry.MonthlyAmount - (entry.Advances + entry.Deductions);
 
                 var existing = await _context.MonthlyPayrollRecords
@@ -101,7 +103,7 @@ namespace Employees_Attendence.Controllers
             }
 
             await _context.SaveChangesAsync();
-            return RedirectToAction(nameof(BatchMonthly), new { month = entries.First().Month, year = entries.First().Year });
+            return RedirectToAction(nameof(BatchMonthly), new { month, year });
         }
     }
 }

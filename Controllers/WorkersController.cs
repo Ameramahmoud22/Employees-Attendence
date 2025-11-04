@@ -100,5 +100,15 @@ namespace Employees_Attendence.Controllers
             await _db.SaveChangesAsync();
             return RedirectToAction(nameof(Index));
         }
+
+        //نجيب كل العمال من قاعدة البيانات، ومعاهم معلومات الفئة
+        public async Task<IActionResult> CompanyWorkers()
+        {
+            var workers = await _db.Workers
+                .Include(w => w.Category)
+                .ToListAsync();
+
+            return View(workers);
+        }
     }
 }

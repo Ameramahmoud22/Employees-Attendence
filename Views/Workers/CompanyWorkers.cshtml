@@ -1,0 +1,53 @@
+﻿@model IEnumerable<Employees_Attendence.Models.Worker>
+
+@{
+    ViewData["Title"] = "عمال الشركة";
+}
+
+<div class="container py-5" data-aos="fade-up">
+    <h2 class="brand-title mb-4 text-center">👷 عمال الشركة</h2>
+
+    @if (ViewBag.Message != null)
+    {
+        <div class="alert alert-warning text-center">@ViewBag.Message</div>
+    }
+    else if (!Model.Any())
+    {
+        <div class="alert alert-info text-center">لا يوجد عمال حالياً في قاعدة البيانات.</div>
+    }
+    else
+    {
+        <table class="table table-bordered table-striped text-center align-middle shadow">
+            <thead class="table-dark">
+                <tr>
+                    <th>الاسم</th>
+                    <th>الفئة</th>
+                    <th>رقم الهاتف</th>
+                    <th>العنوان</th>
+                    <th>ملاحظات</th>
+                    <th>إجراءات</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var worker in Model)
+                {
+                    <tr>
+                        <td>@worker.Name</td>
+                        <td>@worker.Category?.Name</td>
+                        <td>@worker.Phone</td>
+                        <td>@worker.Address</td>
+                        <td>@worker.Notes</td>
+                        <td>
+                            <a asp-action="Edit" asp-route-id="@worker.Id" class="btn btn-warning btn-sm">
+                                <i class="bi bi-pencil-square"></i> تعديل
+                            </a>
+                            <a asp-action="Delete" asp-route-id="@worker.Id" class="btn btn-danger btn-sm">
+                                <i class="bi bi-trash"></i> حذف
+                            </a>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    }
+</div>

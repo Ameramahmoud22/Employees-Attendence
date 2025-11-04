@@ -9,28 +9,23 @@ namespace Employees_Attendence.Controllers
     public class HomeController : Controller
     {
         private readonly ILogger<HomeController> _logger;
-        private readonly ApplicationDbContext _db;
+        private readonly ApplicationDbContext _db; // إضافة السياق
 
+        // تعديل Constructor لاستقبال السياق
         public HomeController(ILogger<HomeController> logger, ApplicationDbContext db)
         {
             _logger = logger;
             _db = db;
         }
 
-
         public async Task<IActionResult> Index()
         {
-            // حساب الإحصائيات المطلوبة لعرضها في لوحة التحكم
-            ViewBag.TotalWorkers = await _db.Workers.CountAsync();
+            // ربط الإحصائيات بالبيانات الفعلية (الطلبات 6 و 7)
+            ViewBag.TotalEmployees = await _db.Workers.CountAsync();
             ViewBag.TotalCategories = await _db.Categories.CountAsync();
-            ViewBag.DailyWageSum = await _db.Workers.SumAsync(w => w.DailyWage);
 
-            // حساب إجمالي القبض الشهري الأخير
-            var lastMonth = DateTime.Today.AddMonths(-1);
-            var lastMonthlyPay = await _db.MonthlyPayrollRecords
-                .Where(r => r.Year == lastMonth.Year && r.Month == lastMonth.Month)
-                .SumAsync(r => r.NetPay);
-            ViewBag.LastMonthlyPay = lastMonthlyPay;
+            // يمكنك تغيير هذه الإحصائية لتكون أكثر دقة (مثلاً مجموع صافي القبض)
+            ViewBag.TotalPayrollRecords = await _db.WeeklyPayrollRecords.CountAsync();
 
             return View();
         }

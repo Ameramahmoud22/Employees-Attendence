@@ -15,7 +15,7 @@
         <div>
             <a class="btn btn-outline-light me-2" asp-action="Index" asp-route-weekOffset="@(weekOffset - 1)">← الأسبوع السابق</a>
             <a class="btn btn-outline-light me-2" asp-action="Index" asp-route-weekOffset="@(weekOffset + 1)">الأسبوع التالي →</a>
-            <a class="btn btn-gold" onclick="document.getElementById('attendanceForm').submit();">حفظ التغييرات</a>
+            <button type="submit" form="attendanceForm" class="btn btn-gold">حفظ التغييرات</button>
         </div>
     </div>
 
@@ -38,19 +38,24 @@
                     @foreach (var w in workers)
                     {
                         <tr>
-                            <td class="text-start ps-3">@w.Name <div class="text-muted small">@w.Category?.Name</div></td>
+                            <td class="text-start ps-3">
+                                @w.Name
+                                <div class="text-muted small">@w.Category?.Name</div>
+                            </td>
 
                             @foreach (var d in weekDates)
                             {
                                 var key = (w.Id, d.Date);
-                                bool isChecked = attendance != null && attendance.ContainsKey(key) && attendance[key].IsPresent;
+                                string currentStatus = attendance != null && attendance.ContainsKey(key)
+                                ? attendance[key].Status
+                                : "غياب";
+
                                 <td>
-                                    <div class="form-check form-switch d-flex justify-content-center align-items-center">
-                                        <input class="form-check-input" type="checkbox" role="switch"
-                                               id="present_@w.Id@d.ToString("yyyyMMdd")"
-                                               name="present_@w.Id@d.ToString("yyyyMMdd")"
-                                        @(isChecked ? "checked" : "") />
-                                    </div>
+                                    <select name="status_@w.Id@d.ToString("yyyyMMdd")" class="form-select form-select-sm bg-dark text-light border-secondary">
+                                        <option value="حاضر" selected="@(currentStatus == "حاضر")">حاضر</option>
+                                        <option value="غياب" selected="@(currentStatus == "غياب")">غياب</option>
+                                        <option value="إجازة" selected="@(currentStatus == "إجازة")">إجازة</option>
+                                    </select>
                                 </td>
                             }
                         </tr>
@@ -58,11 +63,10 @@
                 </tbody>
             </table>
         </div>
-
     </form>
 
     <div class="mt-3">
-        <small class="text-muted">ملاحظة: علّمي الخانات ثم اضغطي "حفظ التغييرات" لحفظ الحضور في قاعدة البيانات.</small>
+        <small class="text-muted">ملاحظة: حددي حالة كل عامل لكل يوم ثم اضغطي "حفظ التغييرات" لحفظها في قاعدة البيانات.</small>
     </div>
 </div>
 
@@ -97,10 +101,10 @@
             border-right: 1px solid rgba(255,255,255,0.03);
         }
 
-        .form-check-input {
-            width: 40px;
-            height: 20px;
-            transform: scale(1.1);
+        select.form-select {
+            width: 100%;
+            border-radius: 10px;
+            padding: 4px;
         }
     </style>
 }

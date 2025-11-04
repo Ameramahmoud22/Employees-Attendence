@@ -5,46 +5,38 @@ namespace Employees_Attendence.Models
 {
     public class Worker
     {
-
-
         public int Id { get; set; }
 
-        [Required, Display(Name = "اسم العامل")]
+        [Required(ErrorMessage = "اسم العامل مطلوب")]
+        [Display(Name = "الاسم")]
         public string Name { get; set; }
 
-        [Display(Name = "رقم الهاتف")]
+        [Display(Name = "نوع العامل")]
+        public string Type { get; set; } // "عامل" أو "صنايعي" مثلاً
+
+        [Display(Name = "الهاتف")]
         public string Phone { get; set; }
 
         [Display(Name = "العنوان")]
         public string Address { get; set; }
 
-        [Display(Name = "الوظيفة")]
-        public string Type { get; set; } // عامل - صنايعي - مساعد
+        [Display(Name = "مبلغ القبض باليوم")]
+        [Column(TypeName = "decimal(18,2)") ]
+            public decimal DailyWage { get; set; } = 0m;
 
-        [Display(Name = "قيمة اليومية (ج.م)")]
-        [Column(TypeName = "decimal(18,2)")]
-        public decimal DailyWage { get; set; }
-
-        [Display(Name = "الخصومات (ج.م)")]
-        [Column(TypeName = "decimal(18,2)")]
-        public decimal Deductions { get; set; }
-
-        [Display(Name = "السُلف (ج.م)")]
-        [Column(TypeName = "decimal(18,2)")]
-        public decimal Advance { get; set; }
-
-        [Display(Name = "الملاحظات")]
+        [Display(Name = "ملاحظات")]
         public string Notes { get; set; }
 
-        [ForeignKey("Category")]
         [Display(Name = "الفئة")]
         public int CategoryId { get; set; }
         public Category Category { get; set; }
 
-        // 💰 خاصية محسوبة تلقائيًا (ما تتحفظش في الداتا بيز)
-        [NotMapped]
-        [Display(Name = "إجمالي القبض الأسبوعي (ج.م)")]
-        public decimal WeeklyPay => (DailyWage * 6) - (Deductions + Advance);
+        // **[جديد]** لإحصائيات القبض
+        public ICollection<WeeklyPayrollRecord> WeeklyPayrollRecords { get; set; }
+        public ICollection<MonthlyPayrollRecord> MonthlyPayrollRecords { get; set; }
+
+        // **[جديد]** لإضافة سجلات الحضور
+        public ICollection<AttendanceRecord> AttendanceRecords { get; set; }
     }
-    }
+}
 
