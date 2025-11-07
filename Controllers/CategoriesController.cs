@@ -1,4 +1,4 @@
-﻿using Employees_Attendence.Data;
+using Employees_Attendence.Data;
 using Employees_Attendence.Models;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -11,13 +11,15 @@ namespace Employees_Attendence.Controllers
         public CategoriesController(ApplicationDbContext db) => _db = db;
 
         // قائمة الفئات
-        public async Task<IActionResult> Index() => View(await _db.Categories.Include(c => c.Workers).ToListAsync());
+        public async Task<IActionResult> Index() {
+            return View(await _db.Categories.Include(c => c.Workers).ToListAsync());
+        }
 
         // إضافة فئة (GET)
         public IActionResult Create() => View();
 
         [HttpPost]
-        [ValidateAntiForgeryToken] // لضمان أمان وحفظ النموذج بنجاح
+        [ValidateAntiForgeryToken]
         public async Task<IActionResult> Create(Category cat)
         {
             if (!ModelState.IsValid)
@@ -38,7 +40,7 @@ namespace Employees_Attendence.Controllers
             return View(cat);
         }
 
-        // تعديل فئة (POST) - (تم إضافة [ValidateAntiForgeryToken] هنا)
+        // تعديل فئة (POST)
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Edit(int id, Category cat)

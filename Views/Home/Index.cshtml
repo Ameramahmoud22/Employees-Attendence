@@ -1,11 +1,11 @@
-﻿@{
+@{
     ViewData["Title"] = "الصفحة الرئيسية";
 }
 
 <section class="container py-5">
     <div class="text-center mb-5" data-aos="fade-up">
         <h1 class="text-gold fw-bold">  لوحه تحكم الخاصة بالعمال</h1>
-        <p class="text-muted">نظرة عامة على أداء العمال والفئات</p>
+        <p class="text-white">نظرة عامة على أداء العمال والفئات</p>
     </div>
 
     <div class="row g-4">
@@ -15,7 +15,7 @@
                 <div class="card-body">
                     <i class="bi bi-people fs-1 text-gold mb-3"></i>
                     <h5 class="card-title text-gold">عدد العمال</h5>
-                    <h2 class="fw-bold">45</h2>
+                    <h2 class="fw-bold">@ViewBag.TotalEmployees</h2>
                 </div>
             </div>
         </div>
@@ -26,7 +26,7 @@
                 <div class="card-body">
                     <i class="bi bi-grid-1x2 fs-1 text-gold mb-3"></i>
                     <h5 class="card-title text-gold">عدد الفئات</h5>
-                    <h2 class="fw-bold">6</h2>
+                    <h2 class="fw-bold">@ViewBag.TotalCategories</h2>
                 </div>
             </div>
         </div>
@@ -37,7 +37,7 @@
                 <div class="card-body">
                     <i class="bi bi-cash-stack fs-1 text-gold mb-3"></i>
                     <h5 class="card-title text-gold">إجمالي القبض الأسبوعي</h5>
-                    <h2 class="fw-bold">12,500 ج.م</h2>
+                    <h2 class="fw-bold">@ViewBag.TotalPayrollRecords.ToString("N0") ج.م</h2>
                 </div>
             </div>
         </div>
@@ -48,7 +48,7 @@
                 <div class="card-body">
                     <i class="bi bi-calendar3 fs-1 text-gold mb-3"></i>
                     <h5 class="card-title text-gold">إجمالي القبض الشهري</h5>
-                    <h2 class="fw-bold">50,000 ج.م</h2>
+                    <h2 class="fw-bold">@ViewBag.TotalMonthlyPayroll.ToString("N0") ج.م</h2>
                 </div>
             </div>
         </div>
@@ -59,9 +59,9 @@
             <div class="card-body">
                 <h5 class="text-gold mb-3">ملاحظات وإحصائيات إضافية</h5>
                 <ul class="text-light">
-                    <li>أكثر فئة عمّال نشاطًا: <span class="text-gold">الدهان</span></li>
-                    <li>عدد العمال الحاضرين اليوم: <span class="text-gold">38</span></li>
-                    <li>إجمالي الخصومات هذا الأسبوع: <span class="text-gold">2,300 ج.م</span></li>
+                    <li>أكثر فئة عمّال نشاطًا: <span class="text-gold">@ViewBag.MostActiveCategory</span></li>
+                    <li>عدد العمال الحاضرين اليوم: <span class="text-gold">@ViewBag.PresentEmployeesToday</span></li>
+                    <li>إجمالي الخصومات هذا الأسبوع: <span class="text-gold">@ViewBag.TotalDeductionsThisWeek.ToString("N0") ج.م</span></li>
                 </ul>
             </div>
         </div>

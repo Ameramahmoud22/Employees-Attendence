@@ -1,156 +1,97 @@
-﻿@model IEnumerable<Employees_Attendence.Models.MonthlyPayrollRecord>
-@using Employees_Attendence.Models
+@model IEnumerable<Employees_Attendence.Models.MonthlyPayrollRecord>
+
 @{
-    ViewData["Title"] = "إنشاء سجلات القبض الشهري";
-    // يتم جلب الشهر والسنة من ViewBag الذي تم إعداده في Controller
-    int month = (int)ViewBag.Month;
-    int year = (int)ViewBag.Year;
+    ViewData["Title"] = "صرف شهري";
+    var month = (int)ViewBag.Month;
+    var year = (int)ViewBag.Year;
+    var payrollByCategory = (Dictionary<Employees_Attendence.Models.Category, List<Employees_Attendence.Models.MonthlyPayrollRecord>>)ViewBag.PayrollByCategory;
+    var attendanceDays = (Dictionary<int, int>)ViewBag.AttendanceDays;
+    var grandTotal = (decimal)ViewBag.GrandTotal;
 }
 
-<h3 class="text-info mb-4"><i class="fa-solid fa-calendar-check me-2"></i> @ViewData["Title"]</h3>
-<hr />
-
-<div class="app-card p-4 mb-4">
-    <div class="d-flex justify-content-between align-items-center mb-4">
-        <h5 class="fw-bold text-secondary">الشهر المحدد: (@month / @year)</h5>
-
-        @* نموذج لتغيير الشهر والسنة (لتسهيل التنقل) *@
-        <form method="get" asp-action="BatchMonthly" class="d-flex align-items-center">
-            <label class="me-2">الشهر:</label>
-            <select name="month" class="form-select me-3" style="width:100px;">
-                @for (int m = 1; m <= 12; m++)
-                {
-                    <option value="@m" selected="@(m == month ? "selected" : null)">@m</option>
-                }
-            </select>
-
-            <label class="me-2">السنة:</label>
-            <select name="year" class="form-select me-3" style="width:120px;">
-                @for (int y = DateTime.Today.Year - 2; y <= DateTime.Today.Year + 1; y++)
-                {
-                    <option value="@y" selected="@(y == year ? "selected" : null)">@y</option>
-                }
-            </select>
-
-            <button type="submit" class="btn btn-outline-secondary">عرض</button>
-        </form>
+<div class="container py-4">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h2 class="text-gold">@ViewData["Title"] - @(new DateTime(year, month, 1).ToString("MMMM yyyy"))</h2>
+        <div>
+            <a class="btn btn-outline-light me-2" asp-action="BatchMonthly" asp-route-month="@(month - 1 > 0 ? month - 1 : 12)" asp-route-year="@(month - 1 > 0 ? year : year - 1)">← الشهر السابق</a>
+            <a class="btn btn-outline-light me-2" asp-action="BatchMonthly" asp-route-month="@(month + 1 < 13 ? month + 1 : 1)" asp-route-year="@(month + 1 < 13 ? year : year + 1)">الشهر التالي →</a>
+            <button type="submit" form="payrollForm" class="btn btn-gold">حفظ القبض</button>
+        </div>
     </div>
 
-    @* نموذج الحفظ: يتم إرسال مصفوفة من MonthlyPayrollRecord *@
-    <form method="post" asp-action="SaveMonthly" id="payForm">
-        <table class="table table-bordered table-hover align-middle table-striped">
-            <thead class="table-fancy">
-                <tr>
-                    <th>اسم العامل (الأجر اليومي)</th>
-                    <th><i class="fa-solid fa-calculator me-1"></i> المبلغ الشهري المقترح</th>
-                    <th><i class="fa-solid fa-arrow-down-wide-short me-1"></i> خصومات (@nameof(MonthlyPayrollRecord.Deductions))</th>
-                    <th><i class="fa-solid fa-sack-xmark me-1"></i> سلف / واصل (@nameof(MonthlyPayrollRecord.Advances))</th>
-                    <th><i class="fa-solid fa-money-check-dollar me-1"></i> صافي القبض (@nameof(MonthlyPayrollRecord.NetPay))</th>
-                    <th>ملاحظات (أيام الحضور)</th>
-                </tr>
-            </thead>
-            <tbody>
-                @for (int i = 0; i < Model.Count(); i++)
-                {
-                    var item = Model.ElementAt(i);
-                    <tr>
-                        <td class="fw-bold">
-                            @item.Worker?.Name
-                            <span class="badge bg-secondary">@item.Worker?.DailyWage.ToString("N2")</span>
+    <form id="payrollForm" asp-action="SaveMonthly" method="post">
+        @Html.AntiForgeryToken()
 
-                            @* حقول مخفية لتمرير البيانات الأساسية *@
-                            <input type="hidden" name="entries[@i].WorkerId" value="@item.WorkerId" />
-                            <input type="hidden" name="entries[@i].Month" value="@item.Month" />
-                            <input type="hidden" name="entries[@i].Year" value="@item.Year" />
-                            <input type="hidden" name="entries[@i].Id" value="@item.Id" />
-                        </td>
+        @foreach (var (category, records) in payrollByCategory)
+        {
+            <h3 class="text-gold mt-4">@(category?.Name ?? "غير مصنف")</h3>
+            <div class="table-responsive shadow rounded">
+                <table class="table align-middle text-center mb-0" style="background:#0f0f0f; color:#fff;">
+                    <thead style="background:#111; border-bottom:2px solid #d4af37;">
+                        <tr>
+                            <th>العامل</th>
+                            <th>أيام الحضور</th>
+                            <th>المبلغ المستحق</th>
+                            <th>سلفيات</th>
+                            <th>خصميات</th>
+                            <th>الصافي</th>
+                            <th style="width: 20%;">ملاحظات</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @for (int i = 0; i < records.Count; i++)
+                        {
+                            var record = records[i];
+                            var days = attendanceDays.GetValueOrDefault(record.WorkerId, 0);
 
-                        @* Monthly Amount - مبلغ القبض الأساسي *@
-                        <td>
-                            <input type="number" step="0.01" class="form-control monthlyAmount"
-                                   name="entries[@i].MonthlyAmount" value="@item.MonthlyAmount.ToString("N2")" required />
-                        </td>
-
-                        @* Deductions - الخصومات (من نموذج MonthlyPayrollRecord) *@
-                        <td>
-                            <input type="number" step="0.01" class="form-control deductions"
-                                   name="entries[@i].Deductions" value="@item.Deductions.ToString("N2")" />
-                        </td>
-
-                        @* Advances - السلف/الواصل (من نموذج MonthlyPayrollRecord) *@
-                        <td>
-                            <input type="number" step="0.01" class="form-control advances"
-                                   name="entries[@i].Advances" value="@item.Advances.ToString("N2")" />
-                        </td>
-
-                        @* Net Pay - الصافي (للقراءة فقط - يحسب عبر JavaScript) *@
-                        <td>
-                            <input type="text" class="form-control netpay fw-bold bg-light"
-                                   name="entries[@i].NetPay" value="@item.NetPay.ToString("N2")" readonly />
-                        </td>
-
-                        @* Notes - الملاحظات *@
-                        <td>
-                            <input type="text" class="form-control" name="entries[@i].Notes" value="@item.Notes" />
-                        </td>
-                    </tr>
-                }
-            </tbody>
-        </table>
-
-        <div class="d-flex justify-content-between align-items-center mt-4 p-3 bg-light border rounded shadow-sm">
-            <div>
-                <strong class="text-secondary">💵 إجمالي القبض الشهري الكلي: </strong>
-                <span id="grandTotal" class="display-6 fw-bold text-primary">0.00</span>
+                            <tr>
+                                <td class="text-start ps-3">@record.Worker.Name</td>
+                                <td>@days</td>
+                                <td>@record.MonthlyAmount.ToString("N0")</td>
+                                <input type="hidden" name="entries[@i].WorkerId" value="@record.WorkerId" />
+                                <input type="hidden" name="entries[@i].Month" value="@month" />
+                                <input type="hidden" name="entries[@i].Year" value="@year" />
+                                <td><input type="number" name="entries[@i].Advances" value="@record.Advances" class="form-control form-control-sm bg-dark text-light border-secondary" /></td>
+                                <td><input type="number" name="entries[@i].Deductions" value="@record.Deductions" class="form-control form-control-sm bg-dark text-light border-secondary" /></td>
+                                <td>@record.NetPay.ToString("N0")</td>
+                                <td><input type="text" name="entries[@i].Notes" value="@record.Notes" class="form-control form-control-sm bg-dark text-light border-secondary" /></td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
             </div>
-            <button class="btn btn-success btn-lg shadow" type="submit">
-                <i class="fa-solid fa-floppy-disk me-1"></i> حفظ سجلات الشهر
-            </button>
+        }
+
+        <div class="text-end mt-4 pe-3">
+            <h4 class="text-gold">الإجمالي الكلي: @grandTotal.ToString("N0") جنيه</h4>
         </div>
     </form>
 </div>
 
-@section Scripts {
-    <script>
-        // دالة تحويل القيمة إلى رقم (معالجة الفواصل)
-        function parseNum(v) {
-            v = v + '';
-            v = v.replace(/[^0-9.]/g, '');
-            return parseFloat(v) || 0;
+@section Styles {
+    <style>
+        .text-gold {
+            color: #d4af37;
         }
 
-        // دالة إعادة الحساب
-        function recalc() {
-            let grand = 0;
-            document.querySelectorAll('tbody tr').forEach(row => {
-                const monthly = parseNum(row.querySelector('.monthlyAmount')?.value);
-                const ded = parseNum(row.querySelector('.deductions')?.value);
-                const adv = parseNum(row.querySelector('.advances')?.value);
-
-                // الصيغة: الصافي = المبلغ الشهري - (الاستلاف + الخصومات)
-                const net = monthly - (ded + adv);
-
-                // تحديث حقل الصافي
-                const netPayInput = row.querySelector('.netpay');
-                if (netPayInput) netPayInput.value = net.toFixed(2);
-
-                grand += net;
-            });
-            // تحديث الإجمالي الكلي في أسفل الصفحة
-            document.getElementById('grandTotal').innerText = grand.toFixed(2);
+        .btn-gold {
+            background: #d4af37;
+            color: #000;
+            border-radius: 30px;
+            padding: 8px 16px;
+            border: none;
         }
 
-        // الاستماع لتغييرات الإدخال وبدء الحساب
-        document.addEventListener('input', function(e) {
-            if (e.target.classList.contains('monthlyAmount') || e.target.classList.contains('advances') || e.target.classList.contains('deductions')) {
-                recalc();
-            }
-        });
+        .btn-outline-light {
+            background: transparent;
+            color: #fff;
+            border: 1px solid rgba(255,255,255,0.08);
+            padding: 6px 10px;
+            border-radius: 8px;
+        }
 
-        // تشغيل الدالة عند تحميل الصفحة لأول مرة (لحساب الإجمالي)
-        document.addEventListener('DOMContentLoaded', recalc);
-    </script>
-    @{
-        await Html.RenderPartialAsync("_ValidationScriptsPartial");
-    }
+        input.form-control {
+            width: 100%;
+        }
+    </style>
 }

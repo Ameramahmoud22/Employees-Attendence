@@ -1,7 +1,8 @@
-﻿using Employees_Attendence.Data;
+using Employees_Attendence.Data;
 using Employees_Attendence.Models;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using System.Globalization;
 
 namespace Employees_Attendence.Controllers
 {
@@ -18,15 +19,25 @@ namespace Employees_Attendence.Controllers
         public async Task<IActionResult> Index(int weekOffset = 0)
         {
             var today = DateTime.Today.AddDays(weekOffset * 7);
-            var startOfWeek = today.AddDays(-(int)today.DayOfWeek + (int)DayOfWeek.Saturday);
-            var weekDates = Enumerable.Range(0, 7).Select(i => startOfWeek.AddDays(i)).ToList();
+            int daysToAdd = ((int)DayOfWeek.Saturday - (int)today.DayOfWeek - 7) % 7;
+            var startOfWeek = today.AddDays(daysToAdd);
+            var weekDates = Enumerable.Range(0, 6).Select(i => startOfWeek.AddDays(i)).ToList();
 
             // نجيب كل العمال مع الفئة
             var workers = await _context.Workers.Include(w => w.Category).ToListAsync();
 
+            var workersByCategory = workers
+                .GroupBy(w => w.Category)
+                .OrderBy(g => g.Key == null ? 1 : 0)
+                .ThenBy(g => g.Key?.Name)
+                .ToDictionary(
+                    g => g.Key ?? new Category { Id = 0, Name = "غير مصنف" },
+                    g => g.OrderBy(w => w.Name).ToList()
+                );
+
             // نجيب الحضور في هذا الأسبوع
             var attendanceRecords = await _context.AttendanceRecords
-                .Where(a => a.AttendanceDate >= startOfWeek && a.AttendanceDate <= startOfWeek.AddDays(6))
+                .Where(a => a.AttendanceDate >= startOfWeek && a.AttendanceDate <= startOfWeek.AddDays(5))
                 .ToListAsync();
 
             // نخزنهم في Dictionary ليسهل الوصول
@@ -36,7 +47,7 @@ namespace Employees_Attendence.Controllers
             );
 
             ViewBag.WeekDates = weekDates;
-            ViewBag.Workers = workers;
+            ViewBag.WorkersByCategory = workersByCategory;
             ViewBag.Attendance = attendanceDict;
             ViewBag.WeekOffset = weekOffset;
 
@@ -46,48 +57,74 @@ namespace Employees_Attendence.Controllers
         // 💾 حفظ الحضور للأسبوع الحالي
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> SaveWeek(int weekOffset)
+        public async Task<IActionResult> SaveWeek(int weekOffset, IFormCollection form)
         {
+            var recordsToUpdate = new List<AttendanceRecord>();
+            var recordsToAdd = new List<AttendanceRecord>();
+
             var today = DateTime.Today.AddDays(weekOffset * 7);
-            var startOfWeek = today.AddDays(-(int)today.DayOfWeek + (int)DayOfWeek.Saturday);
-            var weekDates = Enumerable.Range(0, 7).Select(i => startOfWeek.AddDays(i)).ToList();
+            int daysToAddInWeek = ((int)DayOfWeek.Saturday - (int)today.DayOfWeek - 7) % 7;
+            var startOfWeek = today.AddDays(daysToAddInWeek);
+            var endOfWeek = startOfWeek.AddDays(5);
 
-            var workers = await _context.Workers.ToListAsync();
+            var existingRecords = await _context.AttendanceRecords
+                .Where(a => a.AttendanceDate >= startOfWeek && a.AttendanceDate <= endOfWeek)
+                .ToDictionaryAsync(a => (a.WorkerId, a.AttendanceDate.Date));
 
-            foreach (var w in workers)
+            foreach (var key in form.Keys)
             {
-                foreach (var d in weekDates)
+                if (!key.StartsWith("status_")) continue;
+
+                var parts = key.Split('_');
+                if (parts.Length != 3) continue;
+
+                if (!int.TryParse(parts[1], out int workerId)) continue;
+                if (!DateTime.TryParseExact(parts[2], "yyyy-MM-dd", CultureInfo.InvariantCulture, DateTimeStyles.None, out DateTime date)) continue;
+
+                var workerExists = await _context.Workers.AnyAsync(w => w.Id == workerId);
+                if (!workerExists)
                 {
-                    // الاسم المتوقع من الـ form
-                    var key = $"status_{w.Id}{d:yyyyMMdd}";
-                    var selectedStatus = Request.Form[key];
+                    continue;
+                }
 
-                    if (string.IsNullOrEmpty(selectedStatus))
-                        continue; // مفيش اختيار
+                var selectedStatus = form[key];
+                if (string.IsNullOrEmpty(selectedStatus)) continue;
 
-                    var existing = await _context.AttendanceRecords
-                        .FirstOrDefaultAsync(a => a.WorkerId == w.Id && a.AttendanceDate.Date == d.Date);
-
-                    if (existing != null)
+                if (existingRecords.TryGetValue((workerId, date.Date), out var existing))
+                {
+                    if (existing.Status != selectedStatus)
                     {
                         existing.Status = selectedStatus;
-                        _context.Update(existing);
+                        recordsToUpdate.Add(existing);
                     }
-                    else
+                }
+                else
+                {
+                    var record = new AttendanceRecord
                     {
-                        var record = new AttendanceRecord
-                        {
-                            WorkerId = w.Id,
-                            AttendanceDate = d,
-                            Status = selectedStatus,
-                            Notes = null
-                        };
-                        _context.Add(record);
-                    }
+                        WorkerId = workerId,
+                        AttendanceDate = date,
+                        Status = selectedStatus,
+                        Notes = ""
+                    };
+                    recordsToAdd.Add(record);
                 }
             }
 
-            await _context.SaveChangesAsync();
+            if (recordsToUpdate.Any())
+            {
+                _context.UpdateRange(recordsToUpdate);
+            }
+            if (recordsToAdd.Any())
+            {
+                _context.AddRange(recordsToAdd);
+            }
+
+            if (recordsToUpdate.Any() || recordsToAdd.Any())
+            {
+                await _context.SaveChangesAsync();
+            }
+
             TempData["Success"] = "تم حفظ الحضور الأسبوعي بنجاح ✅";
             return RedirectToAction(nameof(Index), new { weekOffset });
         }

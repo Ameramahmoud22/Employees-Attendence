@@ -1,4 +1,4 @@
-﻿using System.Diagnostics;
+using System.Diagnostics;
 using Employees_Attendence.Data;
 using Employees_Attendence.Models;
 using Microsoft.AspNetCore.Mvc;
@@ -9,9 +9,8 @@ namespace Employees_Attendence.Controllers
     public class HomeController : Controller
     {
         private readonly ILogger<HomeController> _logger;
-        private readonly ApplicationDbContext _db; // إضافة السياق
+        private readonly ApplicationDbContext _db;
 
-        // تعديل Constructor لاستقبال السياق
         public HomeController(ILogger<HomeController> logger, ApplicationDbContext db)
         {
             _logger = logger;
@@ -20,12 +19,25 @@ namespace Employees_Attendence.Controllers
 
         public async Task<IActionResult> Index()
         {
-            // ربط الإحصائيات بالبيانات الفعلية (الطلبات 6 و 7)
             ViewBag.TotalEmployees = await _db.Workers.CountAsync();
             ViewBag.TotalCategories = await _db.Categories.CountAsync();
 
-            // يمكنك تغيير هذه الإحصائية لتكون أكثر دقة (مثلاً مجموع صافي القبض)
-            ViewBag.TotalPayrollRecords = await _db.WeeklyPayrollRecords.CountAsync();
+            var weeklyPayrolls = await _db.WeeklyPayrollRecords.ToListAsync();
+            ViewBag.TotalPayrollRecords = weeklyPayrolls.Sum(p => p.NetPay);
+
+            var monthlyPayrolls = await _db.MonthlyPayrollRecords.ToListAsync();
+            ViewBag.TotalMonthlyPayroll = monthlyPayrolls.Sum(p => p.NetPay);
+
+            ViewBag.MostActiveCategory = _db.AttendanceRecords.Include(a => a.Worker.Category)
+                .GroupBy(a => a.Worker.Category.Name)
+                .Select(g => new { CategoryName = g.Key, AttendanceCount = g.Count() })
+                .OrderByDescending(x => x.AttendanceCount)
+                .FirstOrDefault()?.CategoryName;
+
+            ViewBag.PresentEmployeesToday = await _db.AttendanceRecords.CountAsync(a => a.AttendanceDate.Date == DateTime.Today);
+            ViewBag.TotalDeductionsThisWeek = weeklyPayrolls
+                .Where(p => p.WeekStart >= DateTime.Today.AddDays(-7))
+                .Sum(p => p.Deductions);
 
             return View();
         }

@@ -1,7 +1,7 @@
-﻿@model Employees_Attendence.Models.Category
+@model Employees_Attendence.Models.Worker
 
 @{
-    ViewData["Title"] = "تعديل فئة: " + Model.Name;
+    ViewData["Title"] = "تعديل عامل: " + Model.Name;
 }
 
 <div class="app-card p-4 bg-dark text-light shadow-lg rounded-4">
@@ -20,6 +20,50 @@
                     <label asp-for="Name" class="form-label text-gold fw-bold"></label>
                     <input asp-for="Name" class="form-control bg-dark text-light border-gold" />
                     <span asp-validation-for="Name" class="text-danger"></span>
+                </div>
+
+                <div class="form-group mb-4">
+                    <label asp-for="Type" class="form-label text-gold fw-bold"></label>
+                    <input asp-for="Type" class="form-control bg-dark text-light border-gold" />
+                    <span asp-validation-for="Type" class="text-danger"></span>
+                </div>
+
+                <div class="form-group mb-4">
+                    <label asp-for="Phone" class="form-label text-gold fw-bold"></label>
+                    <input asp-for="Phone" class="form-control bg-dark text-light border-gold" />
+                    <span asp-validation-for="Phone" class="text-danger"></span>
+                </div>
+
+                <div class="form-group mb-4">
+                    <label asp-for="Address" class="form-label text-gold fw-bold"></label>
+                    <input asp-for="Address" class="form-control bg-dark text-light border-gold" />
+                    <span asp-validation-for="Address" class="text-danger"></span>
+                </div>
+
+                <div class="form-group mb-4">
+                    <label asp-for="DailyWage" class="form-label text-gold fw-bold"></label>
+                    <input asp-for="DailyWage" class="form-control bg-dark text-light border-gold" />
+                    <span asp-validation-for="DailyWage" class="text-danger"></span>
+                </div>
+                
+                <div class="form-group mb-4">
+                    <label asp-for="Notes" class="form-label text-gold fw-bold"></label>
+                    <textarea asp-for="Notes" class="form-control bg-dark text-light border-gold"></textarea>
+                    <span asp-validation-for="Notes" class="text-danger"></span>
+                </div>
+
+                <div class="form-group mb-4">
+                    <label asp-for="CategoryId" class="form-label text-gold fw-bold"></label>
+                    <select asp-for="CategoryId" class="form-control bg-dark text-light border-gold" asp-items="ViewBag.Categories"></select>
+                </div>
+
+                <div class="form-group mb-4">
+                    <label asp-for="PayrollType" class="form-label text-gold fw-bold"></label>
+                    <select asp-for="PayrollType" class="form-control bg-dark text-light border-gold">
+                        <option value="Weekly">أسبوعي</option>
+                        <option value="Monthly">شهري</option>
+                    </select>
+                    <span asp-validation-for="PayrollType" class="text-danger"></span>
                 </div>
 
                 <div class="form-group">

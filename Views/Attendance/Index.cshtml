@@ -1,9 +1,9 @@
-﻿@{
+@{
     ViewData["Title"] = "تسجيل الحضور الأسبوعي";
-    var weekDates = ViewBag.WeekDates as List<DateTime>;
-    var workers = ViewBag.Workers as List<Employees_Attendence.Models.Worker>;
-    var attendance = ViewBag.Attendance as Dictionary<(int, DateTime), Employees_Attendence.Models.AttendanceRecord>;
-    var weekOffset = (int)(ViewBag.WeekOffset ?? 0);
+    var weekDates = (List<DateTime>)ViewBag.WeekDates;
+    var workersByCategory = (Dictionary<Employees_Attendence.Models.Category, List<Employees_Attendence.Models.Worker>>)ViewBag.WorkersByCategory;
+    var attendance = (Dictionary<(int, DateTime), Employees_Attendence.Models.AttendanceRecord>)ViewBag.Attendance;
+    var weekOffset = (int)ViewBag.WeekOffset;
 }
 
 <link href="https://cdnjs.cloudflare.com/ajax/libs/aos/2.3.4/aos.css" rel="stylesheet" />
@@ -23,46 +23,53 @@
         @Html.AntiForgeryToken()
         <input type="hidden" name="weekOffset" value="@weekOffset" />
 
-        <div class="table-responsive shadow rounded">
-            <table class="table align-middle text-center mb-0" style="background:#0f0f0f; color:#fff;">
-                <thead>
-                    <tr style="background:#111; border-bottom:2px solid #d4af37;">
-                        <th class="text-gold">اسم العامل</th>
-                        @foreach (var d in weekDates)
-                        {
-                            <th class="text-gold">@d.ToString("ddd dd/MM")</th>
-                        }
-                    </tr>
-                </thead>
-                <tbody>
-                    @foreach (var w in workers)
-                    {
-                        <tr>
-                            <td class="text-start ps-3">
-                                @w.Name
-                                <div class="text-muted small">@w.Category?.Name</div>
-                            </td>
-
-                            @foreach (var d in weekDates)
+        @if (workersByCategory != null)
+        {
+            @foreach (var categoryGroup in workersByCategory)
+            {
+                <h3 class="text-gold mt-4">@categoryGroup.Key.Name</h3>
+                <div class="table-responsive shadow rounded">
+                    <table class="table align-middle text-center mb-0" style="background:#0f0f0f; color:#fff;">
+                        <thead>
+                            <tr style="background:#111; border-bottom:2px solid #d4af37;">
+                                <th class="text-gold">اسم العامل</th>
+                                @foreach (var d in weekDates)
+                                {
+                                    <th class="text-gold">@d.ToString("ddd dd/MM")</th>
+                                }
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var w in categoryGroup.Value)
                             {
-                                var key = (w.Id, d.Date);
-                                string currentStatus = attendance != null && attendance.ContainsKey(key)
-                                ? attendance[key].Status
-                                : "غياب";
+                                <tr>
+                                    <td class="text-start ps-3 text-white">
+                                        @w.Name
+                                        <div class="text-white small">@w.Category?.Name</div>
+                                    </td>
 
-                                <td>
-                                    <select name="status_@w.Id@d.ToString("yyyyMMdd")" class="form-select form-select-sm bg-dark text-light border-secondary">
-                                        <option value="حاضر" selected="@(currentStatus == "حاضر")">حاضر</option>
-                                        <option value="غياب" selected="@(currentStatus == "غياب")">غياب</option>
-                                        <option value="إجازة" selected="@(currentStatus == "إجازة")">إجازة</option>
-                                    </select>
-                                </td>
+                                    @foreach (var d in weekDates)
+                                    {
+                                        var key = (w.Id, d.Date);
+                                        string currentStatus = attendance != null && attendance.ContainsKey(key)
+                                        ? attendance[key].Status
+                                        : "غياب";
+
+                                        <td>
+                                            <select name="status_@(w.Id)_@d.ToString("yyyy-MM-dd")" class="form-select form-select-sm bg-dark text-light border-secondary">
+                                                <option value="حاضر" selected="@(currentStatus == "حاضر")">حاضر</option>
+                                                <option value="غياب" selected="@(currentStatus == "غياب")">غياب</option>
+                                                <option value="إجازة" selected="@(currentStatus == "إجازة")">إجازة</option>
+                                            </select>
+                                        </td>
+                                    }
+                                </tr>
                             }
-                        </tr>
-                    }
-                </tbody>
-            </table>
-        </div>
+                        </tbody>
+                    </table>
+                </div>
+            }
+        }
     </form>
 
     <div class="mt-3">

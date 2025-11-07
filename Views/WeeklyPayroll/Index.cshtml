@@ -1,146 +1,97 @@
-﻿@model IEnumerable<Employees_Attendence.Models.WeeklyPayrollRecord>
-@using Employees_Attendence.Models
+@model List<Employees_Attendence.Models.WeeklyPayrollRecord>
+
 @{
-    ViewData["Title"] = "قائمة القبض الأسبوعي";
-    // يتم جلب تاريخ بداية الأسبوع من ViewBag الذي تم إعداده في Controller
-    var weekStart = (DateTime)ViewBag.WeekStart;
-    // تاريخ نهاية الأسبوع هو 6 أيام بعد البداية
-    var weekEnd = weekStart.AddDays(6);
+    ViewData["Title"] = "صرف أسبوعي";
+    var weekStart = ViewBag.WeekStart != null ? (DateTime)ViewBag.WeekStart : DateTime.Today;
+    var payrollByCategory = ViewBag.PayrollByCategory as Dictionary<Employees_Attendence.Models.Category, List<Employees_Attendence.Models.WeeklyPayrollRecord>> ?? new Dictionary<Employees_Attendence.Models.Category, List<Employees_Attendence.Models.WeeklyPayrollRecord>>();
+    var attendanceDays = ViewBag.AttendanceDays as Dictionary<int, int> ?? new Dictionary<int, int>();
+    var grandTotal = ViewBag.GrandTotal != null ? (decimal)ViewBag.GrandTotal : 0m;
+    var arabicDays = new[] { "السبت", "الأحد", "الاثنين", "الثلاثاء", "الأربعاء", "الخميس", "الجمعة" };
 }
 
-<h3 class="text-info mb-4"><i class="fa-solid fa-calendar-week me-2"></i> @ViewData["Title"]</h3>
-<hr />
-
-<div class="app-card p-4 mb-4">
-    <div class="d-flex justify-content-between align-items-center mb-4">
-        <h5 class="fw-bold text-secondary">الأسبوع: (@weekStart.ToString("yyyy-MM-dd") - @weekEnd.ToString("yyyy-MM-dd"))</h5>
-
+<div class="container py-4">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h2 class="text-gold">@ViewData["Title"] - الأسبوع من @weekStart.ToString("dd/MM/yyyy")</h2>
         <div>
-            @* أزرار التنقل بين الأسابيع *@
-            <a class="btn btn-outline-primary shadow-sm me-2" asp-action="Index" asp-route-weekStart="@weekStart.AddDays(-7).ToString("yyyy-MM-dd")">
-                <i class="fa-solid fa-arrow-right me-1"></i> الأسبوع الماضي
-            </a>
-            <a class="btn btn-primary shadow-sm" asp-action="Index" asp-route-weekStart="@weekStart.AddDays(7).ToString("yyyy-MM-dd")">
-                الأسبوع القادم <i class="fa-solid fa-arrow-left me-1"></i>
-            </a>
+            <a class="btn btn-outline-light me-2" asp-action="Index" asp-route-weekStart="@weekStart.AddDays(-7).ToString("yyyy-MM-dd")">← الأسبوع السابق</a>
+            <a class="btn btn-outline-light me-2" asp-action="Index" asp-route-weekStart="@weekStart.AddDays(7).ToString("yyyy-MM-dd")">الأسبوع التالي →</a>
+            <button type="submit" form="payrollForm" class="btn btn-gold">حفظ القبض</button>
         </div>
     </div>
 
-    @* نموذج الحفظ: يتم إرسال مصفوفة من WeeklyPayrollRecord *@
-    <form method="post" asp-action="SaveWeekly" id="payForm">
-        <table class="table table-bordered table-hover align-middle table-striped">
-            <thead class="table-fancy">
-                <tr>
-                    <th>اسم العامل (الأجر اليومي)</th>
-                    <th><i class="fa-solid fa-calculator me-1"></i> المبلغ الأسبوعي المقترح</th>
-                    <th><i class="fa-solid fa-arrow-down-wide-short me-1"></i> خصومات (@nameof(WeeklyPayrollRecord.Deductions))</th>
-                    <th><i class="fa-solid fa-sack-xmark me-1"></i> سلف / واصل (@nameof(WeeklyPayrollRecord.Advances))</th>
-                    <th><i class="fa-solid fa-money-check-dollar me-1"></i> صافي القبض (@nameof(WeeklyPayrollRecord.NetPay))</th>
-                    <th>ملاحظات (أيام الحضور)</th>
-                </tr>
-            </thead>
-            <tbody>
-                @for (int i = 0; i < Model.Count(); i++)
-                {
-                    var item = Model.ElementAt(i);
-                    <tr>
-                        <td class="fw-bold">
-                            @item.Worker?.Name
-                            <span class="badge bg-secondary">@item.Worker?.DailyWage.ToString("N2")</span>
+    <form id="payrollForm" asp-action="SaveWeekly" method="post">
+        @Html.AntiForgeryToken()
 
-                            @* حقول مخفية لتمرير البيانات الأساسية *@
-                            <input type="hidden" name="entries[@i].WorkerId" value="@item.WorkerId" />
-                            <input type="hidden" name="entries[@i].WeekStart" value="@item.WeekStart.ToString("yyyy-MM-dd")" />
-                            <input type="hidden" name="entries[@i].Id" value="@item.Id" />
-                            <input type="hidden" name="WeekStart" value="@item.WeekStart.ToString("yyyy-MM-dd")" /> @* لتمرير التاريخ في حالة عدم وجود سجلات *@
-                        </td>
+        @{ var index = 0; }
+        @foreach (var (category, records) in payrollByCategory)
+        {
+            <h3 class="text-gold mt-4">@(category?.Name ?? "غير مصنف")</h3>
+            <div class="table-responsive shadow rounded">
+                <table class="table align-middle text-center mb-0" style="background:#0f0f0f; color:#fff;">
+                    <thead style="background:#111; border-bottom:2px solid #d4af37;">
+                        <tr>
+                            <th>العامل</th>
+                            <th>أيام الحضور</th>
+                            <th>المبلغ المستحق</th>
+                            <th>سلفيات</th>
+                            <th>خصميات</th>
+                            <th>الصافي</th>
+                            <th style="width: 20%;">ملاحظات</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var record in records)
+                        {
+                            var days = attendanceDays.GetValueOrDefault(record.WorkerId, 0);
 
-                        @* Weekly Amount - مبلغ القبض الأساسي *@
-                        <td>
-                            <input type="number" step="0.01" class="form-control weeklyAmount"
-                                   name="entries[@i].WeeklyAmount" value="@item.WeeklyAmount.ToString("N2")" required />
-                        </td>
-
-                        @* Deductions - الخصومات (من نموذج WeeklyPayrollRecord) *@
-                        <td>
-                            <input type="number" step="0.01" class="form-control deductions"
-                                   name="entries[@i].Deductions" value="@item.Deductions.ToString("N2")" />
-                        </td>
-
-                        @* Advances - السلف/الواصل (من نموذج WeeklyPayrollRecord) *@
-                        <td>
-                            <input type="number" step="0.01" class="form-control advances"
-                                   name="entries[@i].Advances" value="@item.Advances.ToString("N2")" />
-                        </td>
-
-                        @* Net Pay - الصافي (للقراءة فقط - يحسب عبر JavaScript) *@
-                        <td>
-                            <input type="text" class="form-control netpay fw-bold bg-light"
-                                   name="entries[@i].NetPay" value="@item.NetPay.ToString("N2")" readonly />
-                        </td>
-
-                        @* Notes - الملاحظات *@
-                        <td>
-                            <input type="text" class="form-control" name="entries[@i].Notes" value="@item.Notes" />
-                        </td>
-                    </tr>
-                }
-            </tbody>
-        </table>
-
-        <div class="d-flex justify-content-between align-items-center mt-4 p-3 bg-light border rounded shadow-sm">
-            <div>
-                <strong class="text-secondary">💵 إجمالي القبض الأسبوعي الكلي: </strong>
-                <span id="grandTotal" class="display-6 fw-bold text-primary">0.00</span>
+                            <tr>
+                                <td class="text-start ps-3">@record.Worker.Name</td>
+                                <td>@days</td>
+                                <td>@record.WeeklyAmount.ToString("N0")</td>
+                                <input type="hidden" name="entries[@index].WorkerId" value="@record.WorkerId" />
+                                <input type="hidden" name="entries[@index].WeekStart" value="@weekStart.ToString("yyyy-MM-dd")" />
+                                <td><input type="number" name="entries[@index].Advances" value="@record.Advances" class="form-control form-control-sm bg-dark text-light border-secondary" /></td>
+                                <td><input type="number" name="entries[@index].Deductions" value="@record.Deductions" class="form-control form-control-sm bg-dark text-light border-secondary" /></td>
+                                <td>@record.NetPay.ToString("N0")</td>
+                                <td><input type="text" name="entries[@index].Notes" value="@record.Notes" class="form-control form-control-sm bg-dark text-light border-secondary" /></td>
+                            </tr>
+                            index++;
+                        }
+                    </tbody>
+                </table>
             </div>
-            <button class="btn btn-success btn-lg shadow" type="submit">
-                <i class="fa-solid fa-floppy-disk me-1"></i> حفظ سجلات الأسبوع
-            </button>
+        }
+
+        <div class="text-end mt-4 pe-3">
+            <h4 class="text-gold">الإجمالي الكلي: @grandTotal.ToString("N0") جنيه</h4>
         </div>
     </form>
 </div>
 
-@section Scripts {
-    <script>
-        // دالة تحويل القيمة إلى رقم (معالجة الفواصل)
-        function parseNum(v) {
-            v = v + '';
-            v = v.replace(/[^0-9.]/g, '');
-            return parseFloat(v) || 0;
+@section Styles {
+    <style>
+        .text-gold {
+            color: #d4af37;
         }
 
-        // دالة إعادة الحساب
-        function recalc() {
-            let grand = 0;
-            document.querySelectorAll('tbody tr').forEach(row => {
-                const weekly = parseNum(row.querySelector('.weeklyAmount')?.value);
-                const ded = parseNum(row.querySelector('.deductions')?.value);
-                const adv = parseNum(row.querySelector('.advances')?.value);
-
-                // الصيغة: الصافي = المبلغ الأسبوعي - (الاستلاف + الخصومات)
-                const net = weekly - (ded + adv);
-
-                // تحديث حقل الصافي
-                const netPayInput = row.querySelector('.netpay');
-                if (netPayInput) netPayInput.value = net.toFixed(2);
-
-                grand += net;
-            });
-            // تحديث الإجمالي الكلي في أسفل الصفحة
-            document.getElementById('grandTotal').innerText = grand.toFixed(2);
+        .btn-gold {
+            background: #d4af37;
+            color: #000;
+            border-radius: 30px;
+            padding: 8px 16px;
+            border: none;
         }
 
-        // الاستماع لتغييرات الإدخال وبدء الحساب
-        document.addEventListener('input', function(e) {
-            if (e.target.classList.contains('weeklyAmount') || e.target.classList.contains('advances') || e.target.classList.contains('deductions')) {
-                recalc();
-            }
-        });
+        .btn-outline-light {
+            background: transparent;
+            color: #fff;
+            border: 1px solid rgba(255,255,255,0.08);
+            padding: 6px 10px;
+            border-radius: 8px;
+        }
 
-        // تشغيل الدالة عند تحميل الصفحة لأول مرة (لحساب الإجمالي)
-        document.addEventListener('DOMContentLoaded', recalc);
-    </script>
-    @{
-        await Html.RenderPartialAsync("_ValidationScriptsPartial");
-    }
+        input.form-control {
+            width: 100%;
+        }
+    </style>
 }

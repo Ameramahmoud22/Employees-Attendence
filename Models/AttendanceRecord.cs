@@ -1,4 +1,4 @@
-﻿using System.ComponentModel.DataAnnotations.Schema;
+using System.ComponentModel.DataAnnotations.Schema;
 using System.ComponentModel.DataAnnotations;
 
 namespace Employees_Attendence.Models
@@ -10,7 +10,7 @@ namespace Employees_Attendence.Models
         [Required]
         [Display(Name = "العامل")]
         public int WorkerId { get; set; }
-        public Worker Worker { get; set; }
+        public Worker? Worker { get; set; }
 
         [Required]
         [Display(Name = "تاريخ الحضور")]
@@ -22,7 +22,6 @@ namespace Employees_Attendence.Models
         public string Status { get; set; } = "حاضر";
 
         [Display(Name = "ملاحظات")]
-        public string Notes { get; set; }
+        public string Notes { get; set; } = string.Empty;
     }
 }
-

@@ -1,4 +1,4 @@
-﻿using Employees_Attendence.Models;
+using Employees_Attendence.Models;
 using Microsoft.EntityFrameworkCore;
 
 namespace Employees_Attendence.Data
@@ -19,8 +19,11 @@ namespace Employees_Attendence.Data
         {
             base.OnModelCreating(modelBuilder);
 
-
-            
+            modelBuilder.Entity<AttendanceRecord>()
+                .HasOne(a => a.Worker)
+                .WithMany(w => w.AttendanceRecords) // Correctly specifying the navigation property
+                .HasForeignKey(a => a.WorkerId)
+                .OnDelete(DeleteBehavior.Cascade);
         }
     }
 }

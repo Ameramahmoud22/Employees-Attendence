@@ -1,48 +1,135 @@
-﻿@model IEnumerable<Employees_Attendence.Models.MonthlyPayrollRecord>
-@{
-    ViewData["Title"] = "قائمة القبض الشهري";
+@model List<MonthlyPayrollRecord>
+
+@{ 
+    ViewData["Title"] = "صرف شهري";
+    var month = ViewBag.Month;
+    var year = ViewBag.Year;
+    var grandTotal = ViewBag.GrandTotal;
+    var payrollByCategory = ViewBag.PayrollByCategory as Dictionary<Category, List<MonthlyPayrollRecord>>;
+    var attendanceDays = ViewBag.AttendanceDays as Dictionary<int, int>;
 }
 
-<div class="app-card">
-    <div class="d-flex justify-content-between align-items-center mb-3">
-        <h3>📅 قائمة القبض الشهري</h3>
-        <a class="btn btn-primary" asp-action="BatchMonthly">إضافة سجلات شهرية</a>
+@section Styles {
+    <style>
+        body {
+            background-color: #f8f9fa;
+        }
+
+        .table {
+            -webkit-box-shadow: 0 0.15rem 1.75rem 0 rgba(31,45,65,0.075);
+            box-shadow: 0 0.15rem 1.75rem 0 rgba(31,45,65,0.075);
+        }
+
+        .table th, .table td {
+            vertical-align: middle;
+            padding: 1rem;
+        }
+
+        .sticky-header {
+            position: -webkit-sticky;
+            position: sticky;
+            top: 60px;
+            z-index: 1020;
+        }
+
+        .form-control {
+            border-radius: 0.35rem;
+        }
+
+        .btn-primary {
+            background-color: #0061f2;
+            border-color: #0061f2;
+        }
+
+        .btn-primary:hover {
+            background-color: #0053d0;
+            border-color: #004fb9;
+        }
+
+        .category-header {
+            position: sticky;
+            top: 120px;
+            background-color: #f2f2f2;
+            z-index: 1019;
+        }
+    </style>
+}
+
+<div class="container-fluid mt-4">
+    <h1 class="text-center mb-4">دفتر الصرف الشهري - @month/@year</h1>
+
+    <div class="card shadow-sm mb-4 sticky-header">
+        <div class="card-body d-flex justify-content-between align-items-center">
+            <form method="get" asp-action="Index" class="d-flex gap-2">
+                <select name="month" class="form-select w-auto">
+                    @for (int i = 1; i <= 12; i++)
+                    {
+                        <option value="@i" selected="@(i == month)">@i</option>
+                    }
+                </select>
+                <input type="number" name="year" class="form-control w-auto" value="@year" />
+                <button type="submit" class="btn btn-primary">عرض</button>
+            </form>
+            <div>
+                <button type="submit" form="payrollForm" class="btn btn-success">حفظ التعديلات</button>
+                <span class="fw-bold text-success fs-5 me-3">المجموع الكلي: @grandTotal.ToString("C0")</span>
+            </div>
+        </div>
     </div>
 
-    <table class="table table-bordered table-fancy">
-        <thead>
-            <tr>
-                <th>الشهر</th>
-                <th>السنة</th>
-                <th>اسم العامل</th>
-                <th>الفئة</th>
-                <th>القبض الشهري</th>
-                <th>الاستلاف</th>
-                <th>الخصومات</th>
-                <th>الصافي</th>
-                <th>ملاحظات</th>
-                <th>التحكم</th>
-            </tr>
-        </thead>
-        <tbody>
-            @foreach (var item in Model)
+    <form id="payrollForm" asp-action="SaveMonthly" method="post">
+        @for (int i = 0; i < Model.Count; i++)
+        {
+            <input type="hidden" asp-for="@Model[i].Id" />
+            <input type="hidden" asp-for="@Model[i].WorkerId" />
+            <input type="hidden" asp-for="@Model[i].Month" />
+            <input type="hidden" asp-for="@Model[i].Year" />
+        }
+
+        @if (payrollByCategory != null)
+        {
+            @foreach (var categoryGroup in payrollByCategory.OrderBy(c => c.Key.Name))
             {
-                <tr>
-                    <td>@item.Month</td>
-                    <td>@item.Year</td>
-                    <td>@item.Worker?.Name</td>
-                    <td>@item.Worker?.Category?.Name</td>
-                    <td>@item.MonthlyAmount.ToString("N2")</td>
-                    <td>@item.Advances.ToString("N2")</td>
-                    <td>@item.Deductions.ToString("N2")</td>
-                    <td><strong>@item.NetPay.ToString("N2")</strong></td>
-                    <td>@item.Notes</td>
-                    <td>
-                        <a asp-action="Edit" asp-route-id="@item.Id" class="btn btn-sm btn-outline-warning">تعديل</a>
-                        <a asp-action="Delete" asp-route-id="@item.Id" class="btn btn-sm btn-outline-danger">حذف</a>
-                    </td>
-                </tr>
+                var category = categoryGroup.Key;
+                var records = categoryGroup.Value;
+                var categoryTotal = records.Sum(r => r.NetPay);
+
+                <div class="category-container mb-4">
+                    <h3 class="p-3 rounded text-white bg-dark category-header">@category.Name - المجموع: @categoryTotal.ToString("C0")</h3>
+                    <div class="table-responsive">
+                        <table class="table table-bordered table-hover text-center">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>العامل</th>
+                                    <th>أيام الحضور</th>
+                                    <th>المبلغ الشهري</th>
+                                    <th>السلفيات</th>
+                                    <th>الخصومات</th>
+                                    <th>الصافي</th>
+                                    <th>ملاحظات</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @for (int i = 0; i < Model.Count; i++)
+                                {
+                                    if (Model[i].Worker != null && Model[i].Worker.CategoryId == category.Id)
+                                    {
+                                        <tr>
+                                            <td>@Model[i].Worker.Name</td>
+                                            <td>@(attendanceDays.ContainsKey(Model[i].WorkerId) ? attendanceDays[Model[i].WorkerId] : 0)</td>
+                                            <td>@Model[i].MonthlyAmount.ToString("N0")</td>
+                                            <td><input type="number" step="0.01" class="form-control" asp-for="@Model[i].Advances" /></td>
+                                            <td><input type="number" step="0.01" class="form-control" asp-for="@Model[i].Deductions" /></td>
+                                            <td>@Model[i].NetPay.ToString("N0")</td>
+                                            <td><input type="text" class="form-control" asp-for="@Model[i].Notes" /></td>
+                                        </tr>
+                                    }
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
             }
-        </tbody>
-    </table>
+        }
+    </form>
 </div>

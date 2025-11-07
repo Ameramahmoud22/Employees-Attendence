@@ -1,4 +1,4 @@
-﻿using Employees_Attendence.Data;
+using Employees_Attendence.Data;
 using Employees_Attendence.Models;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
@@ -42,7 +42,7 @@ namespace Employees_Attendence.Controllers
             }
             else
             {
-                ViewBag.Categories = new SelectList(_db.Categories.ToList(), "Id", "Name");
+                ViewBag.CategoryId = new SelectList(_db.Categories.ToList(), "Id", "Name");
             }
 
             return View();
@@ -55,7 +55,7 @@ namespace Employees_Attendence.Controllers
         {
             if (!ModelState.IsValid)
             {
-                ViewBag.Categories = new SelectList(_db.Categories, "Id", "Name", worker.CategoryId);
+                ViewBag.CategoryId = new SelectList(_db.Categories, "Id", "Name", worker.CategoryId);
                 return View(worker);
             }
 

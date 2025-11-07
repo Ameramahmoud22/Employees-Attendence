@@ -1,116 +1,119 @@
-﻿@{
-    ViewData["Title"] = "لوحة الإحصائيات";
+@{
+    ViewData["Title"] = "لوحة التحكم";
 }
 
-<div class="container py-5" data-aos="fade-up">
-    <h2 class="text-center text-gold mb-5 animate__animated animate__fadeInDown">📊 لوحة إحصائيات العمال</h2>
-
-    <!-- Cards Row -->
-    <div class="row g-4 mb-5">
-        <div class="col-md-3">
-            <div class="card text-center shadow-lg border-0 bg-dark text-light animate__animated animate__zoomIn">
-                <div class="card-body">
-                    <h5 class="card-title text-gold">عدد العمال</h5>
-                    <h2 class="fw-bold">@ViewBag.TotalWorkers</h2>
-                </div>
-            </div>
-        </div>
-        <div class="col-md-3">
-            <div class="card text-center shadow-lg border-0 bg-dark text-light animate__animated animate__zoomIn animate__delay-1s">
-                <div class="card-body">
-                    <h5 class="card-title text-gold">عدد الفئات</h5>
-                    <h2 class="fw-bold">@ViewBag.TotalCategories</h2>
-                </div>
-            </div>
-        </div>
-        <div class="col-md-3">
-            <div class="card text-center shadow-lg border-0 bg-dark text-light animate__animated animate__zoomIn animate__delay-2s">
-                <div class="card-body">
-                    <h5 class="card-title text-gold">إجمالي الخصومات والسُلف</h5>
-                    <h2 class="fw-bold">@ViewBag.TotalDeductions.ToString("N0") ج.م</h2>
-                </div>
-            </div>
-        </div>
-        <div class="col-md-3">
-            <div class="card text-center shadow-lg border-0 bg-dark text-light animate__animated animate__zoomIn animate__delay-3s">
-                <div class="card-body">
-                    <h5 class="card-title text-gold">إجمالي القبض الأسبوعي</h5>
-                    <h2 class="fw-bold">@ViewBag.TotalWeeklyPay.ToString("N0") ج.م</h2>
-                </div>
-            </div>
-        </div>
+<section class="container py-5">
+    <div class="text-center mb-5">
+        <h1 class="text-gold fw-bold">لوحة التحكم</h1>
+        <p class="text-white">نظرة عامة على أداء العمال والفئات</p>
     </div>
 
-    <!-- Chart Section -->
     <div class="row g-4">
         <div class="col-lg-6">
-            <div class="card bg-dark text-light border-0 shadow-lg p-3" data-aos="fade-right">
-                <h5 class="text-center text-gold mb-3">📈 توزيع العمال حسب الفئات</h5>
-                <canvas id="categoryChart" height="200"></canvas>
+            <div class="card bg-dark border-gold shadow-lg h-100">
+                <div class="card-body">
+                    <h5 class="text-gold mb-3">إجمالي الرواتب حسب الفئة</h5>
+                    <canvas id="payrollChart"></canvas>
+                </div>
             </div>
         </div>
-
         <div class="col-lg-6">
-            <div class="card bg-dark text-light border-0 shadow-lg p-3" data-aos="fade-left">
-                <h5 class="text-center text-gold mb-3">💰 إجمالي القبض لكل فئة</h5>
-                <canvas id="payChart" height="200"></canvas>
+            <div class="card bg-dark border-gold shadow-lg h-100">
+                <div class="card-body">
+                    <h5 class="text-gold mb-3">توزيع العمال حسب الفئة</h5>
+                    <canvas id="workerDistChart"></canvas>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-6">
+            <div class="card bg-dark border-gold shadow-lg h-100">
+                <div class="card-body">
+                    <h5 class="text-gold mb-3">إجمالي الرواتب الأسبوعية</h5>
+                    <canvas id="weeklyPayrollChart"></canvas>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-6">
+            <div class="card bg-dark border-gold shadow-lg h-100">
+                <div class="card-body">
+                    <h5 class="text-gold mb-3">أيام الحضور حسب الفئة</h5>
+                    <canvas id="attendanceChart"></canvas>
+                </div>
             </div>
         </div>
     </div>
-</div>
+</section>
 
 @section Scripts {
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script>
-        AOS.init();
-
-        // بيانات الفئات من السيرفر
-        const categories = @Html.Raw(Newtonsoft.Json.JsonConvert.SerializeObject(ViewBag.TopCategories));
-
-        const names = categories.map(c => c.name);
-        const counts = categories.map(c => c.count);
-
-        // رسم بياني 1: توزيع العمال
-        new Chart(document.getElementById("categoryChart"), {
-            type: 'doughnut',
-            data: {
-                labels: names,
-                datasets: [{
-                    data: counts,
-                    backgroundColor: [
-                        '#d4af37', '#e0c36b', '#b99232', '#f5e1a4', '#7c6b30'
-                    ],
-                    borderColor: '#222',
-                    borderWidth: 2
-                }]
-            },
-            options: {
-                plugins: {
-                    legend: { labels: { color: '#fff' } }
-                }
+        document.addEventListener('DOMContentLoaded', function () {
+            // Chart 1: Payroll by Category
+            var payrollLabels = @Html.Raw(Json.Serialize(ViewBag.ChartLabels));
+            var payrollData = @Html.Raw(Json.Serialize(ViewBag.ChartData));
+            if (payrollLabels && payrollData) {
+                new Chart(document.getElementById('payrollChart'), {
+                    type: 'bar',
+                    data: {
+                        labels: payrollLabels,
+                        datasets: [{
+                            label: 'إجمالي الراتب',
+                            data: payrollData,
+                            backgroundColor: 'rgba(212, 175, 55, 0.7)',
+                        }]
+                    }
+                });
             }
-        });
 
-        // رسم بياني 2: إجمالي القبض (قيمة تقريبية)
-        const payData = counts.map(c => c * 2000); // مثال بسيط
-        new Chart(document.getElementById("payChart"), {
-            type: 'bar',
-            data: {
-                labels: names,
-                datasets: [{
-                    label: 'إجمالي القبض (ج.م)',
-                    data: payData,
-                    backgroundColor: '#d4af37'
-                }]
-            },
-            options: {
-                scales: {
-                    x: { ticks: { color: '#fff' } },
-                    y: { ticks: { color: '#fff' } }
-                },
-                plugins: {
-                    legend: { labels: { color: '#fff' } }
-                }
+            // Chart 2: Worker Distribution
+            var workerDistLabels = @Html.Raw(Json.Serialize(ViewBag.WorkerDistLabels));
+            var workerDistData = @Html.Raw(Json.Serialize(ViewBag.WorkerDistData));
+            if (workerDistLabels && workerDistData) {
+                new Chart(document.getElementById('workerDistChart'), {
+                    type: 'pie',
+                    data: {
+                        labels: workerDistLabels,
+                        datasets: [{
+                            data: workerDistData,
+                            backgroundColor: ['#d4af37', '#b8922e', '#9b7723', '#7d5d18', '#5e430d'],
+                        }]
+                    }
+                });
+            }
+
+            // Chart 3: Weekly Payroll
+            var weeklyPayrollLabels = @Html.Raw(Json.Serialize(ViewBag.WeeklyPayrollLabels));
+            var weeklyPayrollData = @Html.Raw(Json.Serialize(ViewBag.WeeklyPayrollData));
+            if (weeklyPayrollLabels && weeklyPayrollData) {
+                new Chart(document.getElementById('weeklyPayrollChart'), {
+                    type: 'line',
+                    data: {
+                        labels: weeklyPayrollLabels,
+                        datasets: [{
+                            label: 'إجمالي الراتب الأسبوعي',
+                            data: weeklyPayrollData,
+                            borderColor: '#d4af37',
+                            tension: 0.2
+                        }]
+                    }
+                });
+            }
+
+            // Chart 4: Attendance by Category
+            var attendanceLabels = @Html.Raw(Json.Serialize(ViewBag.AttendanceLabels));
+            var attendanceData = @Html.Raw(Json.Serialize(ViewBag.AttendanceData));
+            if (attendanceLabels && attendanceData) {
+                new Chart(document.getElementById('attendanceChart'), {
+                    type: 'bar',
+                    data: {
+                        labels: attendanceLabels,
+                        datasets: [{
+                            label: 'إجمالي أيام الحضور',
+                            data: attendanceData,
+                            backgroundColor: 'rgba(212, 175, 55, 0.8)',
+                        }]
+                    }
+                });
             }
         });
     </script>

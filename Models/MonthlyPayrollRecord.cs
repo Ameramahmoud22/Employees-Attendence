@@ -1,4 +1,4 @@
-﻿using System.ComponentModel.DataAnnotations.Schema;
+using System.ComponentModel.DataAnnotations.Schema;
 using System.ComponentModel.DataAnnotations;
 
 namespace Employees_Attendence.Models
@@ -8,7 +8,7 @@ namespace Employees_Attendence.Models
         public int Id { get; set; }
 
         public int WorkerId { get; set; }
-        public Worker Worker { get; set; }
+        public Worker? Worker { get; set; }
 
         [Display(Name = "شهر")]
         public int Month { get; set; } // 1..12
@@ -33,6 +33,6 @@ namespace Employees_Attendence.Models
         public decimal NetPay { get; set; }
 
         [Display(Name = "ملاحظات")]
-        public string Notes { get; set; }
+        public string Notes { get; set; } = string.Empty;
     }
 }

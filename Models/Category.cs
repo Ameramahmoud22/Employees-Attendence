@@ -1,4 +1,4 @@
-﻿using System.Collections.Generic;
+using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 
 namespace Employees_Attendence.Models
@@ -9,7 +9,7 @@ namespace Employees_Attendence.Models
 
         [Required(ErrorMessage = "اسم الفئة مطلوب")]
         [Display(Name = "اسم الفئة")]
-        public string Name { get; set; }
+        public string Name { get; set; } = string.Empty;
 
         [Display(Name = "الوصف")]
         public string? Description { get; set; }

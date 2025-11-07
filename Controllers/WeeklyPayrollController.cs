@@ -1,4 +1,4 @@
-﻿using Employees_Attendence.Data;
+using Employees_Attendence.Data;
 using Employees_Attendence.Models;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -17,41 +17,40 @@ namespace Employees_Attendence.Controllers
         // تحديد بداية الأسبوع (السبت)
         private DateTime GetWeekStart(DateTime date)
         {
-            while (date.DayOfWeek != DayOfWeek.Saturday)
-                date = date.AddDays(-1);
-            return date.Date;
+            int daysToAdd = ((int)DayOfWeek.Saturday - (int)date.DayOfWeek - 7) % 7;
+            return date.AddDays(daysToAdd).Date;
         }
 
         // ✅ عرض سجلات القبض الأسبوعي + حساب عدد أيام الحضور
         public async Task<IActionResult> Index(DateTime? weekStart)
         {
             var start = GetWeekStart(weekStart ?? DateTime.Today);
-            var end = start.AddDays(6).Date;
+            var end = start.AddDays(5).Date; // Week from Saturday to Thursday
             ViewBag.WeekStart = start;
 
-            var workers = await _db.Workers.Include(w => w.Category).ToListAsync();
+            var workers = await _db.Workers.Where(w => w.PayrollType == "Weekly").Include(w => w.Category).OrderBy(w => w.Name).ToListAsync();
 
-            // نجيب سجلات الحضور للأسبوع ده
             var attendanceRecords = await _db.AttendanceRecords
-                .Where(r => r.AttendanceDate.Date >= start && r.AttendanceDate.Date <= end)
-                .ToListAsync();
+                .Where(r => r.AttendanceDate.Date >= start && r.AttendanceDate.Date <= end && r.Status == "حاضر")
+                .GroupBy(r => r.WorkerId)
+                .ToDictionaryAsync(g => g.Key, g => g.Count());
 
-            // السجلات القديمة (لو موجودة)
             var existingPayroll = await _db.WeeklyPayrollRecords
                 .Where(r => r.WeekStart.Date == start.Date)
                 .ToDictionaryAsync(r => r.WorkerId, r => r);
 
-            var model = new List<WeeklyPayrollRecord>();
+            var payrollModel = new List<WeeklyPayrollRecord>();
+            var attendanceDaysDict = new Dictionary<int, int>();
 
             foreach (var w in workers)
             {
-                var presentDays = attendanceRecords
-                    .Count(r => r.WorkerId == w.Id && r.Status == "حاضر");
+                var presentDays = attendanceRecords.TryGetValue(w.Id, out var days) ? days : 0;
+                attendanceDaysDict[w.Id] = presentDays;
 
                 if (existingPayroll.TryGetValue(w.Id, out var existingRecord))
                 {
-                    existingRecord.Notes = $"({presentDays} يوم حضور) - " + (existingRecord.Notes ?? "");
-                    model.Add(existingRecord);
+                    existingRecord.Worker = w; // Ensure navigation property is loaded
+                    payrollModel.Add(existingRecord);
                 }
                 else
                 {
@@ -64,35 +63,55 @@ namespace Employees_Attendence.Controllers
                         Advances = 0,
                         Deductions = 0,
                         NetPay = w.DailyWage * presentDays,
-                        Notes = $"{presentDays} يوم حضور"
+                        Notes = ""
                     };
-                    model.Add(newRecord);
+                    payrollModel.Add(newRecord);
                 }
             }
 
-            return View(model);
+            var uncategorizedCategory = new Category { Id = 0, Name = "غير مصنف" };
+            var payrollByCategory = payrollModel
+                .GroupBy(p => p.Worker.Category)
+                .OrderBy(g => g.Key == null ? 1 : 0)
+                .ThenBy(g => g.Key?.Name)
+                .ToDictionary(g => g.Key ?? uncategorizedCategory, g => g.ToList());
+
+            ViewBag.PayrollByCategory = payrollByCategory;
+            ViewBag.AttendanceDays = attendanceDaysDict;
+            ViewBag.GrandTotal = payrollModel.Sum(p => p.NetPay);
+
+            return View(payrollModel); // Pass the flat list for form model binding
         }
 
         // ✅ حفظ بيانات القبض الأسبوعي
         [HttpPost]
-        public async Task<IActionResult> SaveWeekly([FromForm] WeeklyPayrollRecord[] entries)
+        public async Task<IActionResult> SaveWeekly([FromForm] List<WeeklyPayrollRecord> entries)
         {
             if (entries == null || !entries.Any())
-                return BadRequest("لا توجد بيانات لحفظها.");
+            {
+                return RedirectToAction(nameof(Index)); // No data to save
+            }
 
-            var weekStart = entries.First().WeekStart.Date;
+            var weekStart = GetWeekStart(entries.First().WeekStart.Date);
 
             foreach (var entry in entries)
             {
+                // Find the worker to get the daily wage
+                var worker = await _db.Workers.FindAsync(entry.WorkerId);
+                if (worker == null) continue;
+
+                // Recalculate amounts based on form values
+                var attendanceDays = (await _db.AttendanceRecords.Where(r => r.WorkerId == entry.WorkerId && r.AttendanceDate >= weekStart && r.AttendanceDate < weekStart.AddDays(6) && r.Status == "حاضر").CountAsync());
+                entry.WeeklyAmount = worker.DailyWage * attendanceDays;
                 entry.NetPay = entry.WeeklyAmount - (entry.Advances + entry.Deductions);
                 entry.WeekStart = weekStart;
+                 entry.Notes ??= string.Empty;
 
                 var existing = await _db.WeeklyPayrollRecords
                     .FirstOrDefaultAsync(r => r.WorkerId == entry.WorkerId && r.WeekStart.Date == weekStart);
 
                 if (existing != null)
                 {
-                    existing.WeeklyAmount = entry.WeeklyAmount;
                     existing.Advances = entry.Advances;
                     existing.Deductions = entry.Deductions;
                     existing.NetPay = entry.NetPay;
@@ -101,7 +120,11 @@ namespace Employees_Attendence.Controllers
                 }
                 else
                 {
-                    _db.Add(entry);
+                     // Only add if there's something to record
+                    if(entry.Advances > 0 || entry.Deductions > 0 || !string.IsNullOrEmpty(entry.Notes))
+                    {
+                        _db.Add(entry);
+                    }
                 }
             }
 

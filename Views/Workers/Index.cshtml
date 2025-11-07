@@ -1,10 +1,13 @@
-﻿@model IEnumerable<Employees_Attendence.Models.Worker>
+@model IEnumerable<Employees_Attendence.Models.Worker>
 @{
     ViewData["Title"] = "العمال";
 }
 
 <div class="container py-5">
-    <h2 class="text-gold mb-4">👷 قائمة العمال</h2>
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2 class="text-gold">👷 قائمة العمال</h2>
+        <a asp-controller="Workers" asp-action="Create" class="btn btn-gold">إضافة عامل جديد</a>
+    </div>
 
     @if (!Model.Any())
     {
@@ -14,15 +17,17 @@
     }
     else
     {
-        <table class="table table-bordered table-striped text-center">
+        <table class="table table-bordered table-striped text-center align-middle">
             <thead class="table-dark">
                 <tr>
                     <th>الاسم</th>
                     <th>الفئة</th>
+                    <th>نوع القبض</th>
                     <th>النوع</th>
                     <th>الهاتف</th>
                     <th>اليومية</th>
                     <th>ملاحظات</th>
+                    <th></th>
                 </tr>
             </thead>
             <tbody>
@@ -31,10 +36,21 @@
                     <tr>
                         <td>@w.Name</td>
                         <td>@w.Category?.Name</td>
+                        <td>@(w.PayrollType == "Weekly" ? "أسبوعي" : "شهري")</td>
                         <td>@w.Type</td>
                         <td>@w.Phone</td>
-                        <td>@w.DailyWage</td>
+                        <td>@w.DailyWage.ToString("N0")</td>
                         <td>@w.Notes</td>
+                        <td>
+                            <div class="btn-group" role="group">
+                                <a asp-action="Edit" asp-route-id="@w.Id" class="btn btn-sm btn-outline-primary">
+                                    <i class="fa-solid fa-pen-to-square me-1"></i> تعديل
+                                </a>
+                                <a asp-action="Delete" asp-route-id="@w.Id" class="btn btn-sm btn-outline-danger">
+                                    <i class="fa-solid fa-trash me-1"></i> حذف
+                                </a>
+                            </div>
+                        </td>
                     </tr>
                 }
             </tbody>
